@@ -1,0 +1,833 @@
+You are an expert full-stack developer, Chrome Extension engineer, game logic engineer, and TypeScript architect.
+
+Build a complete, working, free-stack MVP for a multiplayer Chrome Extension game called “Movie Guess Battle”.
+
+The game is inspired by the Indian paper movie guessing game where a movie name is shown with blanks, for example:
+
+D _ _ _ M
+
+Players guess alphabets one by one. If the guessed alphabet is correct, it appears in the correct positions. If the guessed alphabet is wrong, one letter is deducted from a life word such as BOLLYWOOD or HOLLYWOOD. When all letters from the life word are exhausted, the guessing side loses the round.
+
+Important constraint:
+Use only free and open-source tools. Do not use any paid API, paid movie API, paid database, paid hosting, paid analytics, paid UI kit, paid SDK, paid AI API, paid icon pack, paid image service, or paid authentication provider. The project must run locally first. Any cloud service must be usable on a free tier for MVP testing.
+
+Use this stack:
+
+* Chrome Extension Manifest V3
+* React
+* Vite
+* TypeScript
+* Tailwind CSS
+* Supabase free tier for database, Realtime Broadcast, and Presence
+* Supabase anonymous/local player identity, not paid auth
+* Vitest for tests
+* Local JSON movie data, no external movie API
+* No paid packages
+* No tracking scripts
+* No ads
+* No monetization
+
+Main product:
+Create an online multiplayer Chrome Extension game where 2 to 4 players can join a private room through invite code or invite link and play a Bollywood/Hollywood movie guessing game in real time.
+
+Core screens:
+
+1. Extension popup
+2. Full game page
+3. Create room screen
+4. Join room screen
+5. Lobby screen
+6. Host movie and hint setup screen
+7. Game screen
+8. Result screen
+9. How to play modal
+10. Settings panel
+
+Important UX decision:
+The popup should only work as a launcher. The actual game should open in a full extension page/new tab because extension popups are too small and can close during gameplay.
+
+Chrome Extension requirements:
+Create a Manifest V3 extension with:
+
+* manifest.json
+* popup.html
+* popup React entry
+* game.html
+* game React entry
+* background service worker only if needed
+* icons folder with placeholder icons
+* minimum required permissions only
+* chrome.storage.local for local player name, player id, last room code, and settings
+* no remote hosted JavaScript
+* no eval
+* no unsafe-inline unless unavoidable
+* no unnecessary host permissions
+* no broad permissions such as tabs unless required
+
+Suggested folder structure:
+movie-guess-battle/
+public/
+icons/
+src/
+popup/
+PopupApp.tsx
+main.tsx
+game/
+GameApp.tsx
+main.tsx
+components/
+AlphabetKeyboard.tsx
+ConnectionStatus.tsx
+HostControls.tsx
+HowToPlayModal.tsx
+LifeWordDisplay.tsx
+MovieMaskDisplay.tsx
+PlayerList.tsx
+RoomInviteCard.tsx
+Scoreboard.tsx
+TurnTimer.tsx
+Toast.tsx
+HintSetupScreen.tsx
+HintModeSelector.tsx
+HintCharacterGrid.tsx
+HintPreview.tsx
+HintSettingsPanel.tsx
+screens/
+HomeScreen.tsx
+CreateRoomScreen.tsx
+JoinRoomScreen.tsx
+LobbyScreen.tsx
+GameScreen.tsx
+ResultScreen.tsx
+lib/
+game/
+engine.ts
+hints.ts
+scoring.ts
+masking.ts
+turns.ts
+validation.ts
+supabase/
+client.ts
+rooms.ts
+players.ts
+realtime.ts
+presence.ts
+storage/
+chromeStorage.ts
+utils/
+roomCode.ts
+sanitize.ts
+data/
+bollywoodMovies.ts
+hollywoodMovies.ts
+types/
+game.ts
+hints.ts
+supabase.ts
+tests/
+game-engine.test.ts
+hints.test.ts
+masking.test.ts
+turns.test.ts
+supabase/
+migrations/
+001_create_tables.sql
+002_create_rls_policies.sql
+003_create_views_and_rpc.sql
+manifest.json
+popup.html
+game.html
+package.json
+vite.config.ts
+tailwind.config.ts
+tsconfig.json
+README.md
+SETUP.md
+SUPABASE_SETUP.md
+CHROME_EXTENSION_LOAD.md
+GAME_RULES.md
+ROADMAP.md
+.env.example
+
+Game flow:
+
+1. User opens the Chrome Extension popup.
+2. Popup shows:
+
+   * Create Room
+   * Join Room
+   * Last Room
+   * How to Play
+3. Create Room opens the full game page.
+4. Host enters player name.
+5. Host creates a room.
+6. Generate a short room code like AX72K.
+7. Host can copy invite code or invite link.
+8. Other players join using room code or invite link.
+9. Lobby shows:
+
+   * Room code
+   * Player list
+   * Host badge
+   * Connection status
+   * Category: Bollywood, Hollywood, Mixed
+   * Difficulty: Easy, Medium, Hard, Expert
+   * Life word: BOLLYWOOD or HOLLYWOOD
+   * Hint settings
+   * Start setup button
+10. Host starts round setup.
+11. System selects a movie based on category and difficulty.
+12. Host sees the Host Hint Setup screen.
+13. Host chooses hint mode:
+
+* Manual hints
+* Random hints
+* Smart random hints
+* No hints
+* Difficulty-based auto hints
+
+14. Host previews masked movie.
+15. Host locks hints and starts round.
+16. Players only see the masked movie, not the full movie.
+17. Players guess alphabets turn by turn.
+18. Correct guess reveals letters and adds score.
+19. Wrong guess deducts one letter from the life word.
+20. Full movie guess is allowed.
+21. Round ends when movie is solved or life word is exhausted.
+22. Result screen shows:
+
+* Correct movie
+* Winner/loser
+* Scoreboard
+* Next round button for host
+
+Player rules:
+
+* Minimum players: 2
+* Recommended players: 3 to 4
+* Maximum players: 4
+* Exactly one host per room
+* Only host can change room settings
+* Only host can start round
+* Only host can end round
+* Only host can start next round
+* If host leaves, assign host role to the next active player
+* A player cannot guess the same alphabet twice
+* A player cannot guess when it is not their turn
+* Spaces, punctuation, and numbers should always be visible
+* Alphabet guesses should be case-insensitive
+* Movie completion should ignore spaces, punctuation, and case
+* Repeated letters should reveal together when guessed by a player
+* Room should handle refresh/reconnect using stored player id and room code
+
+Scoring:
+
+* Correct alphabet guess: +10
+* Wrong alphabet guess: 0 by default
+* Optional wrong penalty setting: -5
+* Correct full movie guess: +50
+* Wrong full movie guess: deduct 2 life letters
+* Skipped turn: 0
+* Timer expired: skip turn
+
+Turn timer:
+
+* Default: 30 seconds
+* Host can configure 15, 30, 45, or 60 seconds
+* If timer expires, auto-skip and move to next player
+* Broadcast timer changes to all players
+* Do not rely only on client-side timer for final state; database state should remain source of truth
+
+Life word logic:
+
+* Life word can be BOLLYWOOD or HOLLYWOOD
+* Show all life word letters at round start
+* On wrong alphabet guess, remove/hide one letter from the end
+* On wrong full movie guess, remove/hide two letters
+* When life remaining reaches 0, round is lost
+* Add smooth animation for deducted letters
+
+Advanced Hint Letter Placement System:
+Before each round starts, the host can control the hint letters shown in the movie mask.
+
+Hint modes:
+
+1. Manual Hint Mode
+2. Random Hint Mode
+3. Smart Random Hint Mode
+4. No Hint Mode
+5. Difficulty-Based Auto Hint Mode
+
+Manual Hint Mode:
+
+* Host sees the full movie title during setup.
+* Host can click exact character positions to reveal as hints.
+* Only alphabet positions are clickable.
+* Spaces, punctuation, and numbers are always visible and not counted as hints.
+* Host cannot reveal every letter.
+* Enforce that at least 40% of alphabet letters remain hidden.
+* Add a setting called “Reveal duplicate letters automatically”.
+* If duplicate reveal is enabled and host selects O in DHOOM, both O letters can reveal.
+* If duplicate reveal is disabled, only the selected O position reveals.
+* Host can clear selected hints.
+* Host can preview the final masked movie before starting.
+
+Random Hint Mode:
+
+* System randomly selects hint positions.
+* Randomization should only select alphabet characters.
+* Randomization should not select spaces, punctuation, or numbers.
+* Add “Randomize Again” button.
+* Host can preview result before starting.
+* Randomization should respect difficulty limits.
+* Randomization should not make the movie too easy.
+
+Smart Random Hint Mode:
+
+* Reveal hints more intelligently.
+* Avoid revealing all vowels.
+* Avoid revealing only first and last letters every time.
+* Avoid revealing letters that make short titles too obvious.
+* For short movies, reveal fewer hints.
+* For long movies, reveal slightly more hints.
+* Respect difficulty-based max hints.
+* Avoid predictable patterns.
+
+No Hint Mode:
+
+* Do not reveal alphabet letters.
+* Only spaces, punctuation, and numbers remain visible.
+* Example:
+  3 IDIOTS becomes 3 _ _ _ _ _ _
+
+Difficulty-Based Auto Hint Mode:
+Easy:
+
+* Reveal first and last alphabet letter when allowed.
+* Reveal 25% to 30% of alphabet positions.
+* Allow vowels by default.
+
+Medium:
+
+* Reveal 15% to 20% of alphabet positions.
+* Avoid too many vowels.
+* First and last letters optional.
+
+Hard:
+
+* Reveal 5% to 10% of alphabet positions.
+* Do not automatically reveal first and last letters.
+* Prefer internal letters.
+
+Expert:
+
+* Reveal 0% to 5% of alphabet positions.
+* Mostly no hints.
+
+Hint settings type:
+type HintMode = "manual" | "random" | "smart_random" | "none" | "difficulty_auto";
+
+interface HintSettings {
+hintMode: HintMode;
+hintRevealPercent: number;
+allowVowelHints: boolean;
+revealDuplicateLetters: boolean;
+allowFirstLetterHint: boolean;
+allowLastLetterHint: boolean;
+minimumHiddenPercent: number;
+hostCanPreviewMovie: boolean;
+allowManualOverride: boolean;
+}
+
+interface HintState {
+selectedPositions: number[];
+hintLetters: string[];
+maskedPreview: string;
+validationErrors: string[];
+isLocked: boolean;
+}
+
+interface MaskResult {
+maskedMovie: string;
+hintPositions: number[];
+revealedLetters: string[];
+hiddenPercent: number;
+}
+
+Hint utility functions:
+Create src/lib/game/hints.ts with:
+
+* getSelectableHintPositions(title: string): number[]
+* generateManualHintMask(title: string, selectedPositions: number[], options: HintSettings): MaskResult
+* generateRandomHintPositions(title: string, difficulty: Difficulty, options: HintSettings): number[]
+* generateSmartRandomHintPositions(title: string, difficulty: Difficulty, options: HintSettings): number[]
+* validateHintPositions(title: string, selectedPositions: number[], options: HintSettings): ValidationResult
+* applyHintPositions(title: string, hintPositions: number[], options: HintSettings): string
+* calculateMaxHintCount(title: string, difficulty: Difficulty, options: HintSettings): number
+* calculateHiddenPercent(title: string, hintPositions: number[]): number
+* shouldRevealDuplicateLetter(title: string, position: number, options: HintSettings): boolean
+* isVowel(char: string): boolean
+* getFirstAlphabetPosition(title: string): number | null
+* getLastAlphabetPosition(title: string): number | null
+
+Hint validation:
+
+* Do not allow hint positions outside title length.
+* Do not allow hint positions on spaces.
+* Do not allow hint positions on punctuation.
+* Do not allow hint positions on numbers.
+* Do not allow all letters to be revealed.
+* Enforce minimum hidden percent.
+* Enforce difficulty-based max hints.
+* If allowVowelHints is false, do not allow A, E, I, O, U as hints.
+* If allowFirstLetterHint is false, first alphabet position cannot be selected.
+* If allowLastLetterHint is false, last alphabet position cannot be selected.
+
+Hint count logic:
+If alphabetCount <= 4:
+
+* Easy max hints: 1
+* Medium max hints: 1
+* Hard max hints: 0
+* Expert max hints: 0
+
+If alphabetCount <= 8:
+
+* Easy max hints: 2
+* Medium max hints: 1
+* Hard max hints: 1
+* Expert max hints: 0
+
+If alphabetCount <= 14:
+
+* Easy max hints: 4
+* Medium max hints: 2
+* Hard max hints: 1
+* Expert max hints: 1
+
+If alphabetCount > 14:
+
+* Easy max hints: 30%
+* Medium max hints: 20%
+* Hard max hints: 10%
+* Expert max hints: 5%
+
+Movie masking examples:
+DHOOM with manual hints D and M:
+D _ _ _ M
+
+SHOLAY with random hints H and A:
+_ H _ _ A _
+
+3 IDIOTS with no hint:
+3 _ _ _ _ _ _
+
+KABHI KHUSHI KABHIE GHAM with smart random:
+_ A _ _ _  _ _ _ S _ _  _ A _ _ _ _  _ _ A _
+
+Game engine utility functions:
+Create:
+
+* normalizeMovieTitle()
+* createMaskedMovie()
+* revealLetter()
+* isMovieSolved()
+* applyWrongGuess()
+* getNextPlayerTurn()
+* calculateScore()
+* generateRoomCode()
+* validateGuess()
+* sanitizePlayerName()
+* selectRandomMovie()
+* startRound()
+* endRound()
+* lockHints()
+* submitLetterGuess()
+* submitFullMovieGuess()
+* skipTurn()
+
+Supabase database:
+Create SQL migration files.
+
+Tables:
+rooms:
+
+* id uuid primary key
+* code text unique not null
+* host_player_id uuid
+* status text check: lobby, setup, playing, round_over, inactive
+* category text check: bollywood, hollywood, mixed
+* difficulty text check: easy, medium, hard, expert
+* life_word text
+* life_remaining integer
+* current_turn_player_id uuid
+* masked_movie text
+* guessed_letters text[]
+* wrong_letters text[]
+* settings jsonb
+* hint_mode text
+* hint_positions integer[]
+* hint_letters text[]
+* hint_settings jsonb
+* created_at timestamptz
+* updated_at timestamptz
+
+players:
+
+* id uuid primary key
+* room_id uuid references rooms(id)
+* name text
+* score integer default 0
+* is_host boolean default false
+* is_online boolean default false
+* joined_at timestamptz
+* last_seen_at timestamptz
+
+rounds:
+
+* id uuid primary key
+* room_id uuid references rooms(id)
+* round_number integer
+* category text
+* difficulty text
+* movie_title_private text
+* movie_display text
+* initial_masked_movie text
+* masked_movie text
+* status text
+* hint_mode text
+* hint_positions integer[]
+* hint_settings jsonb
+* winner_player_id uuid nullable
+* created_at timestamptz
+* ended_at timestamptz nullable
+
+guesses:
+
+* id uuid primary key
+* room_id uuid references rooms(id)
+* round_id uuid references rounds(id)
+* player_id uuid references players(id)
+* guess_type text check: letter, full_movie, skip
+* guess_value text
+* is_correct boolean
+* points_delta integer
+* created_at timestamptz
+
+Security:
+Enable Row Level Security.
+Create policies that are safe for MVP:
+
+* Players can read public room state for rooms they joined.
+* Players can read player list in their room.
+* Players can insert themselves into a room if room is not full.
+* Only host can update room settings.
+* Only host can lock hints.
+* Only current turn player can submit a guess.
+* Non-host players must not read movie_title_private before the round ends.
+* If column-level secrecy is difficult, create a public view excluding movie_title_private.
+* Use RPC functions for sensitive operations where possible.
+* Do not expose movie title to all players before round end.
+
+Important security limitation note:
+Because this is a free client-first MVP, complete movie secrecy is difficult if movie selection is performed fully on the client. Prefer storing the private movie title in a restricted table/view/RPC flow. Clearly document any remaining limitation and add a roadmap item for a server-authoritative version using a backend or Supabase Edge Function later.
+
+Realtime:
+Use Supabase Realtime channels:
+
+* room:{roomCode}
+
+Use Presence for:
+
+* online/offline state
+* player reconnects
+* host reassignment trigger
+
+Use Broadcast for:
+
+* player_joined
+* player_left
+* host_changed
+* settings_updated
+* hint_mode_changed
+* hint_positions_updated
+* hint_randomized
+* hint_preview_updated
+* round_hint_locked
+* game_started
+* guess_submitted
+* correct_guess
+* wrong_guess
+* turn_changed
+* timer_expired
+* round_won
+* round_lost
+* round_restarted
+
+Database remains the source of truth. Broadcast events are for fast UI updates only. After important events, refetch/sync room state.
+
+Movie data:
+Create local seed files:
+
+* src/data/bollywoodMovies.ts
+* src/data/hollywoodMovies.ts
+
+Each movie:
+interface Movie {
+id: string;
+title: string;
+year?: number;
+difficulty: "easy" | "medium" | "hard" | "expert";
+category: "bollywood" | "hollywood";
+}
+
+Include at least:
+
+* 50 Bollywood movies
+* 50 Hollywood movies
+* Spread across easy, medium, hard, expert
+* Use well-known movies only
+* Avoid offensive content
+* No external movie API
+
+UI design:
+
+* Modern Indian cinema-inspired look
+* Dark mode default
+* Premium gradient background
+* Big readable movie mask
+* Smooth animations
+* Alphabet keyboard with disabled guessed letters
+* Life word deduction animation
+* Scoreboard leaderboard
+* Host badge
+* Turn indicator
+* Timer ring/progress bar
+* Room invite card
+* Toast messages
+* Responsive full-page layout
+* Accessible contrast
+* Keyboard support for alphabet guesses
+
+Host Hint Setup screen:
+Host should see:
+
+* Full movie title
+* Hint mode dropdown
+* Character grid
+* Selectable alphabet positions
+* Disabled spaces/punctuation/numbers
+* Randomize button
+* Randomize Again button
+* Clear hints button
+* Hint validation messages
+* Preview masked movie
+* Lock hints and start round button
+* Confirmation modal:
+  “Once the round starts, hint letters cannot be changed.”
+
+Players should see only:
+
+* Masked movie
+* Hint letters already revealed
+* Alphabet keyboard
+* Life word
+* Current turn
+* Timer
+* Guessed letters
+* Wrong letters
+* Scoreboard
+
+Players should not see:
+
+* Full movie title
+* Host hint setup controls
+* Hidden hint positions
+* Randomization controls
+* Private movie data
+
+Error handling:
+Handle:
+
+* Invalid room code
+* Room full
+* Room inactive
+* Name missing
+* Duplicate player name
+* Not your turn
+* Guess already used
+* Invalid alphabet
+* Invalid full movie guess
+* Host left
+* Network disconnected
+* Supabase failed
+* Realtime disconnected
+* Timer expired
+* Hint validation failed
+* Round already started
+* Room state out of sync
+
+Testing:
+Use Vitest.
+Add tests for:
+
+* movie normalization
+* movie masking
+* punctuation handling
+* number handling
+* repeated letters
+* correct alphabet reveal
+* wrong guess life deduction
+* full movie guess
+* turn rotation
+* timer skip logic
+* scoring
+* room code generation
+* manual hint selection
+* random hint generation
+* smart random hint generation
+* duplicate hint reveal
+* vowel blocking
+* first letter blocking
+* last letter blocking
+* minimum hidden percentage
+* short movie hint limits
+* long movie hint limits
+* no hint mode
+* difficulty auto hint mode
+
+Documentation:
+Create:
+
+* README.md
+* SETUP.md
+* SUPABASE_SETUP.md
+* CHROME_EXTENSION_LOAD.md
+* GAME_RULES.md
+* ROADMAP.md
+
+README should include:
+
+* Project overview
+* Features
+* Free stack explanation
+* Local setup
+* Supabase setup
+* Chrome extension loading steps
+* How to test multiplayer locally
+* Known limitations
+* Future improvements
+
+Environment:
+Create .env.example:
+VITE_SUPABASE_URL=
+VITE_SUPABASE_ANON_KEY=
+
+Never commit real keys.
+
+Commands:
+Add package scripts:
+
+* npm run dev
+* npm run build
+* npm run test
+* npm run lint
+* npm run format
+* npm run typecheck
+
+Implementation phases:
+Phase 1:
+Set up project structure, Vite React TypeScript, Tailwind, manifest, popup, and game page.
+
+Phase 2:
+Implement local game engine:
+
+* movie selection
+* masking
+* hints
+* guesses
+* scoring
+* life word
+* turns
+* timer
+
+Phase 3:
+Implement Supabase:
+
+* migrations
+* RLS
+* views/RPC where needed
+* room creation
+* room joining
+* player list
+* host controls
+* Realtime Broadcast
+* Presence
+
+Phase 4:
+Implement multiplayer game:
+
+* sync room state
+* current turn
+* guesses
+* wrong/correct updates
+* hint locking
+* next round
+* reconnect
+* host reassignment
+
+Phase 5:
+Polish UI:
+
+* animations
+* responsive layout
+* toasts
+* loading states
+* error states
+* accessibility
+
+Phase 6:
+Add tests and documentation.
+
+Acceptance criteria:
+
+* Extension builds successfully.
+* Extension can be loaded unpacked in Chrome.
+* Popup opens correctly.
+* Full game page opens correctly.
+* Host can create a room.
+* Players can join by code.
+* Room supports 2 to 4 players.
+* Host can select category, difficulty, life word, timer, and hint settings.
+* Host can manually select hint letters.
+* Host can randomize hint letters.
+* Host can use smart random hints.
+* Host can choose no hints.
+* Host can preview masked movie.
+* Players cannot see full movie before round ends.
+* Players can guess letters turn by turn.
+* Correct letters reveal properly.
+* Wrong guesses deduct life word letters.
+* Full movie guess works.
+* Scoreboard updates.
+* Round result screen works.
+* Next round works.
+* Refresh/reconnect works.
+* Tests pass.
+* No paid tools are used.
+* Code is clean, modular, typed, and documented.
+
+Important final output:
+After implementation, provide:
+
+1. Summary of what was built
+2. File tree
+3. Setup commands
+4. Supabase SQL setup steps
+5. How to load unpacked Chrome Extension
+6. How to test 3 to 4 players locally
+7. Known MVP limitations
+8. Future improvement roadmap
+
+Start by creating the complete project structure and implement Phase 1 and Phase 2 first. After Phase 1 and Phase 2 are complete and tests pass, continue with Supabase multiplayer integration.

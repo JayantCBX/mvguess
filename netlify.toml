@@ -1,0 +1,23 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+  functions = "netlify/functions"
+
+[build.environment]
+  NODE_VERSION = "20"
+  VITE_ONLINE_BACKEND = "netlify"
+
+[[redirects]]
+  from = "/"
+  to = "/game.html"
+  status = 200
+
+[[redirects]]
+  from = "/game"
+  to = "/game.html"
+  status = 200
+
+[[redirects]]
+  from = "/join"
+  to = "/game.html?action=join"
+  status = 200
