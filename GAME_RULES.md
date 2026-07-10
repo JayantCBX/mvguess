@@ -21,6 +21,30 @@
 - Timer expiry skips the current turn.
 - The round ends when the movie is solved or the life word reaches zero.
 
+## Guess Visibility
+
+- **Shared public** is the classic default: mask, guessed letters, wrong letters, life, and scores are shared.
+- **Private secret** gives every guesser a private mask, letter lists, life count, and detailed guess history.
+- Secret guesses produce only neutral events for other players. The movie giver never guesses.
+- With round-end score reveal, points remain private until the round finishes.
+- A secret player whose life reaches zero is eliminated while remaining guessers continue.
+- The host can configure the last remaining guesser to continue or win automatically.
+
+## Player Management and Leaving
+
+- The host may kick a player, eliminate them from the current round, or transfer host to an online active player.
+- The host cannot remove themselves without transferring host or leaving.
+- Leaving during a round eliminates that player and advances the turn immediately when needed.
+- When a host leaves, host passes to the next online active player.
+- Kicked players cannot rejoin unless the host explicitly enables that room setting.
+- Eliminated online players become active again when an authorized player returns the completed room to the lobby.
+
+## Results
+
+- A won round displays “Winner Winner Chicken Dinner!” and optional CSS fireworks.
+- Reduced-motion preferences replace the animation with a static celebration.
+- The Lobby button updates the authoritative room state; it does not only change the local screen.
+
 ## Hint Modes
 
 - Manual: host selects exact alphabet positions.

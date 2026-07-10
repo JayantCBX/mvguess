@@ -1,5 +1,19 @@
 import type { Config, Context } from "@netlify/functions";
-import { beginSetup, cancelSetup, createRoom, getRoom, joinRoom, leaveRoom, startOnlineRound, submitGuess, updateSettings } from "./_shared/room-store";
+import {
+  beginSetup,
+  cancelSetup,
+  createRoom,
+  eliminateRoomPlayer,
+  getRoom,
+  joinRoom,
+  kickRoomPlayer,
+  leaveRoom,
+  returnRoomToLobby,
+  startOnlineRound,
+  submitGuess,
+  transferRoomHost,
+  updateSettings
+} from "./_shared/room-store";
 import { error, json, readJson } from "./_shared/responses";
 
 type Body = Record<string, unknown>;
@@ -22,6 +36,7 @@ export default async (request: Request, context: Context) => {
       return json(
         await createRoom({
           playerId: text(body.playerId),
+          deviceId: text(body.deviceId),
           playerName: text(body.playerName),
           settings: body.settings as never
         })
@@ -30,13 +45,16 @@ export default async (request: Request, context: Context) => {
 
     if (!code) return error("Room code is required.", 400);
 
-    if (!action && request.method === "GET") return json(await getRoom(code));
+    if (!action && request.method === "GET") {
+      const playerId = new URL(request.url).searchParams.get("playerId") ?? undefined;
+      return json(await getRoom(code, playerId));
+    }
 
     const body = request.method === "GET" ? {} : await readJson<Body>(request);
     const playerId = text(body.playerId);
 
     if (action === "join" && request.method === "POST") {
-      return json(await joinRoom({ code, playerId, playerName: text(body.playerName) }));
+      return json(await joinRoom({ code, playerId, deviceId: text(body.deviceId), playerName: text(body.playerName) }));
     }
     if (action === "settings" && request.method === "PATCH") {
       return json(await updateSettings({ code, playerId, settings: body.settings as never }));
@@ -70,6 +88,18 @@ export default async (request: Request, context: Context) => {
     }
     if (action === "leave" && request.method === "POST") {
       return json(await leaveRoom({ code, playerId }));
+    }
+    if (action === "kick" && request.method === "POST") {
+      return json(await kickRoomPlayer({ code, playerId, targetPlayerId: text(body.targetPlayerId) }));
+    }
+    if (action === "eliminate" && request.method === "POST") {
+      return json(await eliminateRoomPlayer({ code, playerId, targetPlayerId: text(body.targetPlayerId) }));
+    }
+    if (action === "transfer-host" && request.method === "POST") {
+      return json(await transferRoomHost({ code, playerId, targetPlayerId: text(body.targetPlayerId) }));
+    }
+    if (action === "return-lobby" && request.method === "POST") {
+      return json(await returnRoomToLobby({ code, playerId }));
     }
 
     return error("Not found.", 404);

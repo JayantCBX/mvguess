@@ -1,23 +1,23 @@
 # Roadmap
 
-## Near Term
+## Delivered
 
-- Wire `startOnlineRound` and `submitOnlineGuess` into the React flow for full Supabase-driven gameplay.
-- Add host reassignment on presence leave.
-- Add database-backed timer expiry handling.
-- Add optimistic UI rollback on room state conflicts.
-- Improve extension icon assets with PNG exports.
+- Shared-public and private-secret modes with private masks, life, letter lists, and round-end score reveal.
+- Host kick, elimination, host transfer, leave handling, and automatic host reassignment.
+- Server-authoritative return-to-lobby flow for local, Netlify, and Supabase modes.
+- Privacy-safe anonymous device memory with no cookie permission.
+- Round/guess history, winner fireworks, reduced-motion support, and responsive web layouts.
 
-## Server-Authoritative Version
+## Next hardening
 
-- Move movie selection to Supabase Edge Functions or another free/serverless backend.
-- Make guess validation fully server-authoritative.
-- Add signed ephemeral player tokens instead of trusting local player IDs.
-- Tighten RLS around joined-room membership.
+- Add signed ephemeral player tokens so online actions cannot rely on an unverified anonymous player UUID.
+- Add compare-and-swap room versions for simultaneous Netlify Blob writes.
+- Add server-authoritative timer deadlines instead of trusting each active browser timer.
+- Add richer reconnect/offline banners and an emergency movie-giver reassignment choice during setup.
+- Add end-to-end browser tests for four simultaneous sessions and the documented responsive viewport matrix.
 
-## Polish
+## Optional polish
 
-- Add more animations for life word deduction and correct letter reveals.
-- Add sound effects as optional local assets.
-- Add richer reconnect state and offline banners.
-- Add more movies and optional custom room movie lists.
+- Local sound effects with a mute control.
+- More life-deduction and correct-letter transitions.
+- Exportable room history and custom movie packs.

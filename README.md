@@ -14,6 +14,10 @@ Movie Guess Battle is a Manifest V3 Chrome Extension MVP for a private-room mult
 - Optional Supabase schema for alternate database-backed testing.
 - Public views exclude `movie_title_private`.
 - Vitest coverage for masking, hints, scoring, turns, room codes, guesses, and timer skips.
+- Shared-public and private-secret guess modes with per-player masks, life, guessed letters, and optional round-end score reveal.
+- Host kick, eliminate, and host-transfer controls plus safe leave/reconnect handling.
+- Round and guess history, a server-backed return-to-lobby action, and reduced-motion-friendly winner fireworks.
+- Responsive browser play from 360px upward, including touch-sized controls and mobile host-setting accordions.
 - No paid APIs, no ads, no tracking scripts, no external movie API.
 
 ## File Tree
@@ -67,6 +71,18 @@ With the Netlify backend deployed:
 4. Share the invite link with 2 to 4 players, or have them open `game.html?action=join` and enter the room code.
 5. Each player joins with a unique name and waits in the lobby.
 6. The host enters the first movie. After that round ends, the next player shown on the result screen enters the next movie.
+
+### Four-player and secret-mode testing
+
+Open the deployed game in four separate browser profiles or private windows so each has its own anonymous device ID. Create a four-player room, choose **Private secret**, leave score reveal on **Round end**, and verify that each guesser sees only their own letters, life, mask, and detailed history. Other players should see only a neutral turn event. Use the host player menu to test kick, eliminate, and host transfer. After the result, use **Lobby** and verify every client remains in the lobby instead of returning to the result screen.
+
+## Privacy-safe player memory
+
+This app uses a local anonymous device ID to restore player name and score history. It does not read browser cookies. The extension uses only `chrome.storage.local`; the normal web build falls back to same-origin `localStorage`. No cookie, tabs, or broad host permission is requested, and IP addresses are not used as player identity.
+
+## Responsive web limitation
+
+The Chrome extension itself is not supported by every mobile browser. The deployed `game.html` page is a responsive normal web experience and is the recommended way to play on phones and tablets.
 
 ## Known MVP Limitations
 
