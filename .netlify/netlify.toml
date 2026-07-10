@@ -1,0 +1,68 @@
+functionsDirectory = "C:\\Users\\admin\\Desktop\\AI\\Extension\\ChromeGame\\netlify\\functions"
+functionsDirectoryOrigin = "config-v1"
+redirectsOrigin = "config"
+plugins = []
+headers = []
+
+[build]
+publish = "C:\\Users\\admin\\Desktop\\AI\\Extension\\ChromeGame\\dist"
+publishOrigin = "config"
+commandOrigin = "config"
+command = "npm run build"
+functions = "C:\\Users\\admin\\Desktop\\AI\\Extension\\ChromeGame\\netlify\\functions"
+
+[build.environment]
+NODE_VERSION = "20"
+VITE_ONLINE_BACKEND = "netlify"
+
+[build.processing]
+
+[build.processing.css]
+
+[build.processing.html]
+
+[build.processing.images]
+
+[build.processing.js]
+
+[build.services]
+
+[functions]
+
+[functions."*"]
+
+[[redirects]]
+from = "/"
+to = "/game.html"
+status = 200.0
+force = false
+
+[redirects.query]
+
+[redirects.conditions]
+
+[redirects.headers]
+
+[[redirects]]
+from = "/game"
+to = "/game.html"
+status = 200.0
+force = false
+
+[redirects.query]
+
+[redirects.conditions]
+
+[redirects.headers]
+
+[[redirects]]
+from = "/join"
+to = "/game.html?action=join"
+status = 200.0
+force = false
+
+[redirects.query]
+
+[redirects.conditions]
+
+[redirects.headers]
