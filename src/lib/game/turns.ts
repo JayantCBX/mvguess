@@ -1,7 +1,11 @@
 import type { Player } from "../../types/game";
 
+export function isActivePlayer(player: Player): boolean {
+  return player.isOnline && (player.status ?? "active") === "active";
+}
+
 export function getNextPlayerTurn(players: Player[], currentPlayerId: string | null, excludedPlayerId?: string | null): string | null {
-  const active = players.filter((player) => player.isOnline && player.id !== excludedPlayerId);
+  const active = players.filter((player) => isActivePlayer(player) && player.id !== excludedPlayerId);
   if (active.length === 0) return null;
   if (!currentPlayerId) return active[0].id;
   const currentIndex = active.findIndex((player) => player.id === currentPlayerId);
@@ -10,7 +14,7 @@ export function getNextPlayerTurn(players: Player[], currentPlayerId: string | n
 }
 
 export function getNextMovieGiver(players: Player[], previousMovieGiverId?: string | null, hostPlayerId?: string | null): string | null {
-  const active = players.filter((player) => player.isOnline);
+  const active = players.filter(isActivePlayer);
   if (active.length === 0) return null;
   if (!previousMovieGiverId) {
     return active.find((player) => player.id === hostPlayerId)?.id ?? active[0].id;
@@ -19,8 +23,8 @@ export function getNextMovieGiver(players: Player[], previousMovieGiverId?: stri
 }
 
 export function assignNextHost(players: Player[], leavingHostId?: string): Player[] {
-  const online = players.filter((player) => player.isOnline && player.id !== leavingHostId);
-  const nextHostId = online[0]?.id ?? players.find((player) => player.id !== leavingHostId)?.id;
+  const online = players.filter((player) => isActivePlayer(player) && player.id !== leavingHostId);
+  const nextHostId = online[0]?.id ?? null;
   return players.map((player) => ({
     ...player,
     isHost: player.id === nextHostId

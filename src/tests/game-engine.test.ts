@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { generateRoomCode } from "../utils/roomCode";
 import { createInitialRoom, createLocalPlayer, selectRandomMovie, skipTurn, startRound, submitFullMovieGuess, submitLetterGuess } from "../lib/game/engine";
-import type { RoomSettings } from "../types/game";
+import { DEFAULT_ROOM_SETTINGS, type RoomSettings } from "../types/game";
 
 const settings: RoomSettings = {
+  ...DEFAULT_ROOM_SETTINGS,
   category: "bollywood",
   difficulty: "easy",
   lifeWord: "BOLLYWOOD",

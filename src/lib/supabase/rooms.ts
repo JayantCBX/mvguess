@@ -1,4 +1,4 @@
-import type { RoundState, RoomSettings, RoomState } from "../../types/game";
+import { DEFAULT_ROOM_SETTINGS, type GuessHistoryItem, type PlayerRoundState, type RoundState, type RoomSettings, type RoomState } from "../../types/game";
 import type { RoomRow, PlayerRow } from "../../types/supabase";
 import { generateRoomCode } from "../../utils/roomCode";
 import { sanitizePlayerName } from "../game/validation";
@@ -17,9 +17,30 @@ interface PublicRoundRow {
   winner_player_id: string | null;
 }
 
-interface ExistingPlayerLink {
+interface PlayerRoundStateRow {
+  room_id: string;
+  round_id: string;
+  player_id: string;
+  masked_movie: string;
+  guessed_letters: string[];
+  wrong_letters: string[];
+  life_remaining: number;
+  is_eliminated: boolean;
+  pending_score: number;
+  last_guess_status: PlayerRoundState["lastGuessStatus"];
+  updated_at: string;
+}
+
+interface GuessHistoryRow {
   id: string;
   room_id: string;
+  round_id: string;
+  player_id: string;
+  guess_type: GuessHistoryItem["guessType"];
+  guess_value: string | null;
+  is_correct: boolean | null;
+  visibility: GuessHistoryItem["visibility"];
+  created_at: string;
 }
 
 export interface OnlineRoomResult {
@@ -27,23 +48,16 @@ export interface OnlineRoomResult {
   playerId: string;
 }
 
-export const defaultRoomSettings: RoomSettings = {
-  category: "bollywood",
-  difficulty: "medium",
-  lifeWord: "BOLLYWOOD",
-  timerSeconds: 30,
-  wrongGuessPenalty: false,
-  maxPlayers: 4
-};
+export const defaultRoomSettings: RoomSettings = DEFAULT_ROOM_SETTINGS;
 
 async function getAvailablePlayerId(preferredPlayerId: string, targetRoomId?: string): Promise<string> {
   if (!supabase) return preferredPlayerId;
-  const { data, error } = await supabase.from("players").select("id, room_id").eq("id", preferredPlayerId).maybeSingle();
+  const { data, error } = await supabase.rpc("get_available_player_id_rpc", {
+    p_preferred_player_id: preferredPlayerId,
+    p_target_room_id: targetRoomId ?? null
+  });
   if (error) throw error;
-  const existing = data as ExistingPlayerLink | null;
-  if (!existing) return preferredPlayerId;
-  if (targetRoomId && existing.room_id === targetRoomId) return preferredPlayerId;
-  return crypto.randomUUID();
+  return typeof data === "string" ? data : preferredPlayerId;
 }
 
 function mapRound(row?: PublicRoundRow | null): RoundState | undefined {
@@ -62,7 +76,26 @@ function mapRound(row?: PublicRoundRow | null): RoundState | undefined {
   };
 }
 
-function mapRoom(row: RoomRow, players: PlayerRow[], round?: PublicRoundRow | null): RoomState {
+function mapPersonalState(row?: PlayerRoundStateRow | null): PlayerRoundState | undefined {
+  if (!row) return undefined;
+  return {
+    roomId: row.room_id,
+    roundId: row.round_id,
+    playerId: row.player_id,
+    maskedMovie: row.masked_movie,
+    guessedLetters: row.guessed_letters ?? [],
+    wrongLetters: row.wrong_letters ?? [],
+    lifeRemaining: row.life_remaining,
+    isEliminated: row.is_eliminated,
+    pendingScore: row.pending_score,
+    lastGuessStatus: row.last_guess_status,
+    updatedAt: row.updated_at
+  };
+}
+
+function mapRoom(row: RoomRow, players: PlayerRow[], round?: PublicRoundRow | null, personalState?: PlayerRoundState, guessHistory: GuessHistoryItem[] = []): RoomState {
+  const mappedRound = mapRound(round);
+  if (mappedRound && row.status !== "round_over") mappedRound.movieDisplay = undefined;
   return {
     id: row.id,
     code: row.code,
@@ -78,20 +111,22 @@ function mapRoom(row: RoomRow, players: PlayerRow[], round?: PublicRoundRow | nu
     players: players.map(mapPlayer),
     currentTurnPlayerId: row.current_turn_player_id,
     lifeRemaining: row.life_remaining,
-    maskedMovie: row.masked_movie ?? round?.masked_movie ?? "",
-    guessedLetters: row.guessed_letters ?? [],
-    wrongLetters: row.wrong_letters ?? [],
-    round: mapRound(round),
+    maskedMovie: personalState?.maskedMovie ?? row.masked_movie ?? round?.masked_movie ?? "",
+    guessedLetters: personalState?.guessedLetters ?? row.guessed_letters ?? [],
+    wrongLetters: personalState?.wrongLetters ?? row.wrong_letters ?? [],
+    playerRoundStates: personalState ? { [personalState.playerId]: personalState } : {},
+    guessHistory,
+    round: mappedRound,
     updatedAt: row.updated_at
   };
 }
 
-export async function fetchRoomByCode(code: string): Promise<RoomState | null> {
+export async function fetchRoomByCode(code: string, playerId?: string): Promise<RoomState | null> {
   if (!supabase) return null;
   const { data: room, error: roomError } = await supabase.from("rooms_public").select("*").eq("code", code).maybeSingle();
   if (roomError || !room) throw roomError ?? new Error("Room not found.");
 
-  const { data: players, error: playersError } = await supabase.from("players").select("*").eq("room_id", room.id).order("joined_at");
+  const { data: players, error: playersError } = await supabase.from("players_public").select("*").eq("room_id", room.id).order("joined_at");
   if (playersError) throw playersError;
 
   const { data: round, error: roundError } = await supabase
@@ -103,10 +138,34 @@ export async function fetchRoomByCode(code: string): Promise<RoomState | null> {
     .maybeSingle();
   if (roundError) throw roundError;
 
-  return mapRoom(room as RoomRow, (players ?? []) as PlayerRow[], round as PublicRoundRow | null);
+  let personalState: PlayerRoundState | undefined;
+  let guessHistory: GuessHistoryItem[] = [];
+  const settings = { ...DEFAULT_ROOM_SETTINGS, ...((room.settings ?? {}) as Partial<RoomSettings>) };
+  if (playerId && settings.guessVisibilityMode === "private_secret" && room.status === "playing") {
+    const { data, error } = await supabase.rpc("get_my_player_round_state_rpc", { p_room_id: room.id, p_player_id: playerId });
+    if (error) throw error;
+    const row = Array.isArray(data) ? data[0] : data;
+    personalState = mapPersonalState(row as PlayerRoundStateRow | null);
+  }
+  if (playerId && settings.showGuessHistory && round) {
+    const { data, error } = await supabase.rpc("get_visible_guess_history_rpc", { p_room_id: room.id, p_player_id: playerId });
+    if (error) throw error;
+    guessHistory = ((data ?? []) as GuessHistoryRow[]).map((item) => ({
+      id: item.id,
+      roomId: item.room_id,
+      roundId: item.round_id,
+      playerId: item.player_id,
+      guessType: item.guess_type,
+      guessValue: item.guess_value ?? undefined,
+      isCorrect: item.is_correct ?? undefined,
+      visibility: item.visibility,
+      createdAt: item.created_at
+    }));
+  }
+  return mapRoom(room as RoomRow, (players ?? []) as PlayerRow[], round as PublicRoundRow | null, personalState, guessHistory);
 }
 
-export async function createOnlineRoom(playerId: string, playerName: string, settings: RoomSettings): Promise<OnlineRoomResult> {
+export async function createOnlineRoom(playerId: string, playerName: string, settings: RoomSettings, deviceId?: string): Promise<OnlineRoomResult> {
   if (!supabase) throw new Error("Supabase is not configured.");
   const code = generateRoomCode();
   const now = new Date().toISOString();
@@ -138,7 +197,9 @@ export async function createOnlineRoom(playerId: string, playerName: string, set
     is_host: true,
     is_online: true,
     joined_at: now,
-    last_seen_at: now
+    last_seen_at: now,
+    status: "active",
+    device_id: deviceId ?? null
   });
   if (playerError) throw playerError;
 
@@ -150,15 +211,16 @@ export async function createOnlineRoom(playerId: string, playerName: string, set
   return { room: fetched, playerId: effectivePlayerId };
 }
 
-export async function joinOnlineRoom(code: string, playerId: string, playerName: string): Promise<OnlineRoomResult> {
+export async function joinOnlineRoom(code: string, playerId: string, playerName: string, deviceId?: string): Promise<OnlineRoomResult> {
   if (!supabase) throw new Error("Supabase is not configured.");
   const room = await fetchRoomByCode(code);
   if (!room) throw new Error("Invalid room code.");
   if (room.status === "inactive") throw new Error("Room is inactive.");
-  if (room.players.length >= room.settings.maxPlayers && !room.players.some((player) => player.id === playerId)) {
+  const occupied = room.players.filter((player) => !["left", "kicked"].includes(player.status ?? "active")).length;
+  if (occupied >= room.settings.maxPlayers && !room.players.some((player) => player.id === playerId)) {
     throw new Error("Room is full.");
   }
-  if (room.players.some((player) => player.name.toLowerCase() === playerName.trim().toLowerCase() && player.id !== playerId)) {
+  if (room.players.some((player) => player.name.toLowerCase() === playerName.trim().toLowerCase() && player.id !== playerId && !["left", "kicked"].includes(player.status ?? "active"))) {
     throw new Error("That player name is already used in this room.");
   }
 
@@ -166,7 +228,10 @@ export async function joinOnlineRoom(code: string, playerId: string, playerName:
   const effectivePlayerId = await getAvailablePlayerId(playerId, room.id);
   const existing = room.players.find((player) => player.id === effectivePlayerId);
   if (existing) {
-    await supabase.from("players").update({ is_online: true, last_seen_at: now, name: sanitizePlayerName(playerName) }).eq("id", effectivePlayerId);
+    if (existing.status === "kicked" && !room.settings.allowRejoinAfterKick) throw new Error("You were removed from this room.");
+    if (existing.status === "left" && !room.settings.allowRejoinAfterLeave) throw new Error("Rejoining after leaving is disabled.");
+    if (existing.status === "eliminated" && !room.settings.allowRejoinAfterElimination) throw new Error("You were eliminated from this round.");
+    await supabase.from("players").update({ is_online: true, status: "active", last_seen_at: now, name: sanitizePlayerName(playerName), device_id: deviceId ?? existing.deviceId }).eq("id", effectivePlayerId);
   } else {
     await supabase.from("players").insert({
       id: effectivePlayerId,
@@ -176,7 +241,9 @@ export async function joinOnlineRoom(code: string, playerId: string, playerName:
       is_host: false,
       is_online: true,
       joined_at: now,
-      last_seen_at: now
+      last_seen_at: now,
+      status: "active",
+      device_id: deviceId ?? null
     });
   }
 

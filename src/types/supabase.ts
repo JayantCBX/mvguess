@@ -1,4 +1,4 @@
-import type { Category, Difficulty, LifeWord, RoomStatus } from "./game";
+import type { Category, Difficulty, LifeWord, PlayerStatus, RoomStatus } from "./game";
 import type { HintMode, HintSettings } from "./hints";
 
 export interface RoomRow {
@@ -32,4 +32,10 @@ export interface PlayerRow {
   is_online: boolean;
   joined_at: string;
   last_seen_at: string;
+  status: PlayerStatus | null;
+  eliminated_at: string | null;
+  left_at: string | null;
+  kicked_at: string | null;
+  kicked_by_player_id: string | null;
+  device_id: string | null;
 }

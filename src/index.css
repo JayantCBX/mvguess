@@ -27,12 +27,77 @@ select {
   font: inherit;
 }
 
+button,
+input,
+select,
+summary {
+  touch-action: manipulation;
+}
+
+summary {
+  min-height: 44px;
+  padding-block: 0.5rem;
+}
+
+button,
+input,
+select {
+  min-height: 44px;
+}
+
 .movie-mask {
-  letter-spacing: 0.18em;
-  word-spacing: 0.35em;
+  letter-spacing: clamp(0.08em, 0.8vw, 0.18em);
+  word-spacing: clamp(0.12em, 1.4vw, 0.35em);
 }
 
 .deducted {
   opacity: 0.25;
   transform: translateY(6px) scale(0.92);
+}
+
+.fireworks {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.firework {
+  position: absolute;
+  width: 0.5rem;
+  height: 0.5rem;
+  color: #f6c85f;
+  animation: firework-pop 2.2s ease-out infinite;
+}
+
+.firework i {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: clamp(1.8rem, 8vw, 4.5rem);
+  height: 2px;
+  transform-origin: left center;
+  background: linear-gradient(90deg, currentColor, transparent);
+  box-shadow: 0 0 8px currentColor;
+}
+
+@keyframes firework-pop {
+  0% { opacity: 0; transform: scale(0.15); }
+  16% { opacity: 1; }
+  70% { opacity: 0.9; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.18) translateY(1rem); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+  .firework { opacity: 0.65; animation: none; transform: scale(0.75); }
+}
+
+@media (max-height: 680px) and (orientation: landscape) {
+  body { min-height: 100svh; }
 }

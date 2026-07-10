@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import type { Difficulty } from "../types/game";
+import type { Difficulty, Player } from "../types/game";
 import type { HintSettings } from "../types/hints";
 import {
   applyHintPositions,
@@ -13,6 +13,7 @@ import { HintCharacterGrid } from "./HintCharacterGrid";
 import { HintModeSelector } from "./HintModeSelector";
 import { HintPreview } from "./HintPreview";
 import { HintSettingsPanel } from "./HintSettingsPanel";
+import { PlayerList } from "./PlayerList";
 
 interface HintSetupScreenProps {
   title?: string;
@@ -21,13 +22,18 @@ interface HintSetupScreenProps {
   movieGiverName?: string;
   onStart: (title: string, positions: number[], settings: HintSettings) => void;
   onCancel: () => void;
+  players?: Player[];
+  currentPlayerId?: string;
+  canManagePlayers?: boolean;
+  onKick?: (playerId: string) => void;
+  onTransferHost?: (playerId: string) => void;
 }
 
 function cleanMovieTitle(value: string): string {
   return value.replace(/[<>]/g, "").replace(/\s+/g, " ").trim().slice(0, 80);
 }
 
-export function HintSetupScreen({ title = "", difficulty, canSetup = true, movieGiverName = "Movie giver", onStart, onCancel }: HintSetupScreenProps) {
+export function HintSetupScreen({ title = "", difficulty, canSetup = true, movieGiverName = "Movie giver", onStart, onCancel, players, currentPlayerId, canManagePlayers, onKick, onTransferHost }: HintSetupScreenProps) {
   const [movieTitle, setMovieTitle] = useState(title);
   const [settings, setSettings] = useState<HintSettings>(defaultHintSettings);
   const [positions, setPositions] = useState<number[]>([]);
@@ -51,8 +57,9 @@ export function HintSetupScreen({ title = "", difficulty, canSetup = true, movie
 
   if (!canSetup) {
     return (
-      <main className="mx-auto grid min-h-screen max-w-3xl place-items-center p-4">
-        <section className="w-full rounded-lg border border-white/10 bg-white/5 p-5">
+      <main className="mx-auto grid min-h-screen max-w-5xl place-items-center p-4">
+        <div className="grid w-full gap-5 lg:grid-cols-[1fr_300px]">
+        <section className="rounded-lg border border-white/10 bg-white/5 p-5">
           <p className="text-sm uppercase tracking-widest text-cinema-gold">Round setup</p>
           <h1 className="mt-2 text-3xl font-black">{movieGiverName} is choosing the movie</h1>
           <p className="mt-3 text-slate-300">You will enter the game automatically when the hints are locked.</p>
@@ -60,6 +67,8 @@ export function HintSetupScreen({ title = "", difficulty, canSetup = true, movie
             Back
           </button>
         </section>
+        {players ? <aside><h2 className="mb-3 text-xl font-black">Players</h2><PlayerList players={players} currentPlayerId={currentPlayerId} roomStatus="setup" canManage={canManagePlayers} onKick={onKick} onTransferHost={onTransferHost} /></aside> : null}
+        </div>
       </main>
     );
   }
@@ -123,6 +132,8 @@ export function HintSetupScreen({ title = "", difficulty, canSetup = true, movie
           </button>
         </div>
       </div>
+
+      {players ? <section><h2 className="mb-3 text-xl font-black">Players</h2><PlayerList players={players} currentPlayerId={currentPlayerId} roomStatus="setup" canManage={canManagePlayers} onKick={onKick} onTransferHost={onTransferHost} /></section> : null}
 
       {confirming ? (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 p-4">

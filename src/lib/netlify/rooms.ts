@@ -6,26 +6,27 @@ export interface OnlineRoomResult {
   playerId: string;
 }
 
-export async function fetchRoomByCode(code: string): Promise<RoomState | null> {
+export async function fetchRoomByCode(code: string, playerId?: string): Promise<RoomState | null> {
   try {
-    return await apiRequest<RoomState>(`/api/rooms/${code.toUpperCase()}`);
+    const query = playerId ? `?playerId=${encodeURIComponent(playerId)}` : "";
+    return await apiRequest<RoomState>(`/api/rooms/${code.toUpperCase()}${query}`);
   } catch (error) {
     if (error instanceof Error && error.message === "Room not found.") return null;
     throw error;
   }
 }
 
-export async function createOnlineRoom(playerId: string, playerName: string, settings: RoomSettings): Promise<OnlineRoomResult> {
+export async function createOnlineRoom(playerId: string, playerName: string, settings: RoomSettings, deviceId?: string): Promise<OnlineRoomResult> {
   return apiRequest<OnlineRoomResult>("/api/rooms", {
     method: "POST",
-    body: JSON.stringify({ playerId, playerName, settings })
+    body: JSON.stringify({ playerId, playerName, settings, deviceId })
   });
 }
 
-export async function joinOnlineRoom(code: string, playerId: string, playerName: string): Promise<OnlineRoomResult> {
+export async function joinOnlineRoom(code: string, playerId: string, playerName: string, deviceId?: string): Promise<OnlineRoomResult> {
   return apiRequest<OnlineRoomResult>(`/api/rooms/${code.toUpperCase()}/join`, {
     method: "POST",
-    body: JSON.stringify({ playerId, playerName })
+    body: JSON.stringify({ playerId, playerName, deviceId })
   });
 }
 

@@ -8,7 +8,7 @@ const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
 export function AlphabetKeyboard({ guessedLetters, disabled = false, onGuess }: AlphabetKeyboardProps) {
   return (
-    <div className="grid grid-cols-7 gap-2 sm:grid-cols-13">
+    <div className="grid [grid-template-columns:repeat(auto-fit,minmax(44px,1fr))] gap-2">
       {LETTERS.map((letter) => {
         const used = guessedLetters.includes(letter);
         return (
@@ -17,7 +17,7 @@ export function AlphabetKeyboard({ guessedLetters, disabled = false, onGuess }: 
             type="button"
             disabled={disabled || used}
             onClick={() => onGuess(letter)}
-            className="aspect-square rounded-md border border-white/10 bg-white/10 text-sm font-bold text-white transition hover:border-cinema-gold hover:bg-cinema-gold hover:text-cinema-ink disabled:cursor-not-allowed disabled:opacity-30"
+            className="aspect-square min-h-11 min-w-0 rounded-md border border-white/10 bg-white/10 text-sm font-bold text-white transition hover:border-cinema-gold hover:bg-cinema-gold hover:text-cinema-ink disabled:cursor-not-allowed disabled:opacity-30"
             aria-label={`Guess ${letter}`}
           >
             {letter}

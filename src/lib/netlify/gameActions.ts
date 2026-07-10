@@ -55,3 +55,21 @@ export async function leaveOnlineRoom(args: { roomCode: string; playerId: string
     body: JSON.stringify({ playerId: args.playerId })
   });
 }
+
+function playerAction(action: "kick" | "eliminate" | "transfer-host", args: { roomCode: string; playerId: string; targetPlayerId: string }) {
+  return apiRequest<RoomState>(`/api/rooms/${args.roomCode}/${action}`, {
+    method: "POST",
+    body: JSON.stringify({ playerId: args.playerId, targetPlayerId: args.targetPlayerId })
+  });
+}
+
+export const kickOnlinePlayer = (args: { roomCode: string; playerId: string; targetPlayerId: string }) => playerAction("kick", args);
+export const eliminateOnlinePlayer = (args: { roomCode: string; playerId: string; targetPlayerId: string }) => playerAction("eliminate", args);
+export const transferOnlineHost = (args: { roomCode: string; playerId: string; targetPlayerId: string }) => playerAction("transfer-host", args);
+
+export async function returnOnlineRoomToLobby(args: { roomCode: string; playerId: string }) {
+  return apiRequest<RoomState>(`/api/rooms/${args.roomCode}/return-lobby`, {
+    method: "POST",
+    body: JSON.stringify({ playerId: args.playerId })
+  });
+}

@@ -4,6 +4,7 @@ import { PlayerList } from "../components/PlayerList";
 import { RoomInviteCard } from "../components/RoomInviteCard";
 import { ConnectionStatus } from "../components/ConnectionStatus";
 import { getNextMovieGiver } from "../lib/game/turns";
+import { useState } from "react";
 
 interface LobbyScreenProps {
   room: RoomState;
@@ -13,11 +14,14 @@ interface LobbyScreenProps {
   onSetup: () => void;
   onCopyInvite: () => void;
   onLeave: () => void;
+  onKick?: (playerId: string) => void;
+  onTransferHost?: (playerId: string) => void;
 }
 
-export function LobbyScreen({ room, currentPlayerId, supabaseConfigured, onSettingsChange, onSetup, onCopyInvite, onLeave }: LobbyScreenProps) {
+export function LobbyScreen({ room, currentPlayerId, supabaseConfigured, onSettingsChange, onSetup, onCopyInvite, onLeave, onKick, onTransferHost }: LobbyScreenProps) {
+  const [confirmLeave, setConfirmLeave] = useState(false);
   const isHost = room.hostPlayerId === currentPlayerId;
-  const enoughPlayers = room.players.length >= 2;
+  const enoughPlayers = room.players.filter((player) => player.isOnline && (player.status ?? "active") === "active").length >= 2;
   const nextMovieGiverId = getNextMovieGiver(room.players, room.round?.movieGiverPlayerId, room.hostPlayerId);
   const canBeginSetup = room.status === "round_over" ? nextMovieGiverId === currentPlayerId : isHost;
 
@@ -31,8 +35,8 @@ export function LobbyScreen({ room, currentPlayerId, supabaseConfigured, onSetti
           </div>
           <div className="flex items-center gap-2">
             <ConnectionStatus online={true} configured={supabaseConfigured} />
-            <button type="button" onClick={onLeave} className="rounded-md border border-white/10 px-3 py-2 text-sm">
-              Leave
+            <button type="button" onClick={() => setConfirmLeave(true)} className="rounded-md border border-white/10 px-3 py-2 text-sm">
+              Leave Lobby
             </button>
           </div>
         </div>
@@ -52,8 +56,20 @@ export function LobbyScreen({ room, currentPlayerId, supabaseConfigured, onSetti
       </section>
       <aside className="space-y-3">
         <h2 className="text-xl font-black">Players</h2>
-        <PlayerList players={room.players} currentTurnPlayerId={room.currentTurnPlayerId} />
+        <PlayerList players={room.players} currentTurnPlayerId={room.currentTurnPlayerId} currentPlayerId={currentPlayerId} roomStatus={room.status} canManage={isHost} onKick={onKick} onTransferHost={onTransferHost} />
       </aside>
+      {confirmLeave ? (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/75 p-4" role="dialog" aria-modal="true">
+          <div className="w-full max-w-md rounded-xl border border-white/10 bg-cinema-panel p-5">
+            <h2 className="text-xl font-black">Leave lobby?</h2>
+            <p className="mt-2 text-slate-300">Are you sure you want to leave? You can rejoin later if the room settings allow it.</p>
+            <div className="mt-5 grid grid-cols-2 gap-2">
+              <button type="button" onClick={() => setConfirmLeave(false)} className="rounded-md border border-white/10 px-4 py-3">Stay</button>
+              <button type="button" onClick={onLeave} className="rounded-md bg-cinema-rose px-4 py-3 font-bold">Leave Lobby</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </main>
   );
 }

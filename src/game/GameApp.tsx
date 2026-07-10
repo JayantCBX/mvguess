@@ -2,7 +2,19 @@ import { useCallback, useEffect, useState } from "react";
 import { HowToPlayModal } from "../components/HowToPlayModal";
 import { HintSetupScreen } from "../components/HintSetupScreen";
 import { Toast } from "../components/Toast";
-import { createInitialRoom, createLocalPlayer, skipTurn, startRound, submitFullMovieGuess, submitLetterGuess } from "../lib/game/engine";
+import {
+  createInitialRoom,
+  createLocalPlayer,
+  eliminatePlayerFromRound,
+  kickPlayer,
+  leaveRoom as leaveLocalRoom,
+  returnToLobby,
+  skipTurn,
+  startRound,
+  submitFullMovieGuess,
+  submitLetterGuess,
+  transferHost
+} from "../lib/game/engine";
 import { applyHintPositions } from "../lib/game/hints";
 import { getRevealedLetters } from "../lib/game/masking";
 import { getNextMovieGiver } from "../lib/game/turns";
@@ -10,9 +22,13 @@ import { isNetlifyBackendConfigured } from "../lib/netlify/client";
 import {
   beginOnlineRoundSetup as beginNetlifyRoundSetup,
   cancelOnlineRoundSetup as cancelNetlifyRoundSetup,
+  eliminateOnlinePlayer as eliminateNetlifyPlayer,
+  kickOnlinePlayer as kickNetlifyPlayer,
   leaveOnlineRoom as leaveNetlifyRoom,
+  returnOnlineRoomToLobby as returnNetlifyRoomToLobby,
   startOnlineRound as startNetlifyRound,
-  submitOnlineGuess as submitNetlifyGuess
+  submitOnlineGuess as submitNetlifyGuess,
+  transferOnlineHost as transferNetlifyHost
 } from "../lib/netlify/gameActions";
 import {
   createOnlineRoom as createNetlifyRoom,
@@ -20,12 +36,17 @@ import {
   joinOnlineRoom as joinNetlifyRoom,
   updateOnlineRoomSettings as updateNetlifyRoomSettings
 } from "../lib/netlify/rooms";
-import { isSupabaseConfigured, supabase } from "../lib/supabase/client";
+import { isSupabaseConfigured } from "../lib/supabase/client";
 import {
   beginOnlineRoundSetup as beginSupabaseRoundSetup,
   cancelOnlineRoundSetup as cancelSupabaseRoundSetup,
+  eliminateOnlinePlayer as eliminateSupabasePlayer,
+  kickOnlinePlayer as kickSupabasePlayer,
+  leaveOnlineRoom as leaveSupabaseRoom,
+  returnOnlineRoomToLobby as returnSupabaseRoomToLobby,
   startOnlineRound as startSupabaseRound,
-  submitOnlineGuess as submitSupabaseGuess
+  submitOnlineGuess as submitSupabaseGuess,
+  transferOnlineHost as transferSupabaseHost
 } from "../lib/supabase/gameActions";
 import {
   createOnlineRoom as createSupabaseRoom,
@@ -34,7 +55,18 @@ import {
   updateOnlineRoomSettings as updateSupabaseRoomSettings
 } from "../lib/supabase/rooms";
 import { broadcastRoomEvent, subscribeRoomChannel } from "../lib/supabase/realtime";
-import { getLocalProfile, getOrCreatePlayerId, saveLocalProfile } from "../lib/storage/chromeStorage";
+import {
+  getLocalProfile,
+  getOrCreateDeviceId,
+  getOrCreatePlayerId,
+  getPlayerHistory,
+  markRoomEliminated,
+  markRoomKicked,
+  markRoomLeft,
+  saveLocalProfile,
+  savePreviousScore,
+  type PlayerHistory
+} from "../lib/storage/chromeStorage";
 import { CreateRoomScreen } from "../screens/CreateRoomScreen";
 import { GameScreen } from "../screens/GameScreen";
 import { HomeScreen } from "../screens/HomeScreen";
@@ -68,6 +100,8 @@ export function GameApp() {
   const [playerId, setPlayerId] = useState("");
   const [playerName, setPlayerName] = useState("");
   const [lastRoomCode, setLastRoomCode] = useState("");
+  const [deviceId, setDeviceId] = useState("");
+  const [history, setHistory] = useState<PlayerHistory | null>(null);
   const [toast, setToast] = useState("");
   const [helpOpen, setHelpOpen] = useState(false);
   const [forceLocalMode, setForceLocalMode] = useState(false);
@@ -86,8 +120,16 @@ export function GameApp() {
     async (code: string) => {
       if (!onlineMode) return;
       try {
-        const fetched = usingNetlifyBackend ? await fetchNetlifyRoomByCode(code) : await fetchSupabaseRoomByCode(code);
+        const fetched = usingNetlifyBackend ? await fetchNetlifyRoomByCode(code, playerId) : await fetchSupabaseRoomByCode(code, playerId);
         if (!fetched) return;
+        const me = fetched.players.find((player) => player.id === playerId);
+        if (me?.status === "kicked") {
+          await markRoomKicked(code);
+          setRoom(null);
+          setScreen("home");
+          showToast("You were removed from this room.");
+          return;
+        }
         setRoom(fetched);
         if (fetched.status === "lobby") setScreen("lobby");
         if (fetched.status === "setup") setScreen("setup");
@@ -97,14 +139,16 @@ export function GameApp() {
         showToast(getErrorMessage(error, "Room sync failed."));
       }
     },
-    [onlineMode, showToast, usingNetlifyBackend]
+    [onlineMode, playerId, showToast, usingNetlifyBackend]
   );
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     getLocalProfile().then(async (profile) => {
-      const id = await getOrCreatePlayerId();
+      const [id, anonymousDeviceId, playerHistory] = await Promise.all([getOrCreatePlayerId(), getOrCreateDeviceId(), getPlayerHistory()]);
       setPlayerId(id);
+      setDeviceId(anonymousDeviceId);
+      setHistory(playerHistory);
       setPlayerName(profile.playerName);
       setLastRoomCode(profile.lastRoomCode);
       if (params.get("help")) setHelpOpen(true);
@@ -114,6 +158,19 @@ export function GameApp() {
       if (roomCode) {
         setLastRoomCode(roomCode);
         setScreen("join");
+        if (onlineMode && profile.playerName) {
+          try {
+            const resumed = usingNetlifyBackend
+              ? await joinNetlifyRoom(roomCode, id, profile.playerName, anonymousDeviceId)
+              : await joinSupabaseRoom(roomCode, id, profile.playerName, anonymousDeviceId);
+            setPlayerId(resumed.playerId);
+            setRoom(resumed.room);
+            await saveLocalProfile({ playerId: resumed.playerId, lastRoomCode: roomCode });
+            setScreen(resumed.room.status === "playing" ? "game" : resumed.room.status === "round_over" ? "result" : resumed.room.status === "setup" ? "setup" : "lobby");
+          } catch (error) {
+            showToast(getErrorMessage(error, "Could not restore the room."));
+          }
+        }
       }
     });
   }, []);
@@ -140,8 +197,10 @@ export function GameApp() {
       setPlayerId(id);
       setPlayerName(name);
       await saveLocalProfile({ playerId: id, playerName: name, settings });
-      const onlineResult = usingNetlifyBackend ? await createNetlifyRoom(id, name, settings) : usingSupabaseBackend ? await createSupabaseRoom(id, name, settings) : null;
-      const nextRoom = onlineResult?.room ?? createInitialRoom(createLocalPlayer(name, true), settings);
+      const anonymousDeviceId = deviceId || (await getOrCreateDeviceId());
+      setDeviceId(anonymousDeviceId);
+      const onlineResult = usingNetlifyBackend ? await createNetlifyRoom(id, name, settings, anonymousDeviceId) : usingSupabaseBackend ? await createSupabaseRoom(id, name, settings, anonymousDeviceId) : null;
+      const nextRoom = onlineResult?.room ?? createInitialRoom(createLocalPlayer(name, true, anonymousDeviceId), settings);
       const effectivePlayerId = onlineResult?.playerId ?? id;
       if (effectivePlayerId !== id) {
         setPlayerId(effectivePlayerId);
@@ -159,7 +218,7 @@ export function GameApp() {
     } catch (error) {
       if (onlineMode && isMissingSupabaseSchema(error)) {
         const fallbackPlayerId = playerId || (await getOrCreatePlayerId());
-        const host = createLocalPlayer(name, true);
+        const host = createLocalPlayer(name, true, deviceId || (await getOrCreateDeviceId()));
         host.id = fallbackPlayerId;
         const nextRoom = createInitialRoom(host, settings);
         setPlayerId(fallbackPlayerId);
@@ -183,7 +242,9 @@ export function GameApp() {
         return;
       }
       const id = playerId || (await getOrCreatePlayerId());
-      const { room: nextRoom, playerId: effectivePlayerId } = usingNetlifyBackend ? await joinNetlifyRoom(code, id, name) : await joinSupabaseRoom(code, id, name);
+      const anonymousDeviceId = deviceId || (await getOrCreateDeviceId());
+      setDeviceId(anonymousDeviceId);
+      const { room: nextRoom, playerId: effectivePlayerId } = usingNetlifyBackend ? await joinNetlifyRoom(code, id, name, anonymousDeviceId) : await joinSupabaseRoom(code, id, name, anonymousDeviceId);
       setPlayerId(effectivePlayerId);
       setPlayerName(name);
       setRoom(nextRoom);
@@ -209,6 +270,7 @@ export function GameApp() {
           await updateSupabaseRoomSettings(room, settings);
           await broadcastRoomEvent(channel, "settings_updated", settings);
         }
+        await syncRoom(room.code);
       } catch (error) {
         showToast(getErrorMessage(error, "Could not update settings."));
       }
@@ -216,7 +278,7 @@ export function GameApp() {
   };
 
   const addLocalPlayer = () => {
-    if (!room || onlineMode || room.players.length >= room.settings.maxPlayers) return;
+    if (!room || onlineMode || room.players.filter((player) => player.isOnline && (player.status ?? "active") === "active").length >= room.settings.maxPlayers) return;
     const now = new Date().toISOString();
     const player: Player = {
       id: crypto.randomUUID(),
@@ -232,7 +294,7 @@ export function GameApp() {
 
   const beginSetup = async () => {
     if (!room) return;
-    if (room.players.length < 2) {
+    if (room.players.filter((player) => player.isOnline && (player.status ?? "active") === "active").length < 2) {
       showToast(onlineMode ? "Minimum 2 players required." : "Add a local test player first.");
       return;
     }
@@ -247,8 +309,9 @@ export function GameApp() {
         return;
       }
 
-      const movieGiverId = getNextMovieGiver(room.players, room.round?.movieGiverPlayerId, room.hostPlayerId);
-      const nextRoom = { ...room, status: "setup" as const, currentTurnPlayerId: movieGiverId, updatedAt: new Date().toISOString() };
+      const players = room.players.map((player) => player.status === "eliminated" && player.isOnline ? { ...player, status: "active" as const } : player);
+      const movieGiverId = getNextMovieGiver(players, room.round?.movieGiverPlayerId, room.hostPlayerId);
+      const nextRoom = { ...room, players, status: "setup" as const, currentTurnPlayerId: movieGiverId, updatedAt: new Date().toISOString() };
       setRoom(nextRoom);
       setScreen("setup");
     } catch (error) {
@@ -322,7 +385,7 @@ export function GameApp() {
           if (usingNetlifyBackend) await submitNetlifyGuess({ roomCode: room.code, playerId, guessType: "letter", guessValue: letter });
           else {
             await submitSupabaseGuess({ roomCode: room.code, playerId, guessType: "letter", guessValue: letter });
-            await broadcastRoomEvent(channel, "guess_submitted", { playerId, letter });
+            await broadcastRoomEvent(channel, "guess_submitted", { playerId, guessType: "letter" });
           }
           await syncRoom(room.code);
           return;
@@ -383,14 +446,59 @@ export function GameApp() {
   };
 
   const leave = async () => {
-    if (usingNetlifyBackend && room) {
-      await leaveNetlifyRoom({ roomCode: room.code, playerId }).catch(() => undefined);
+    if (!room) return;
+    try {
+      const wasPlaying = room.status === "playing";
+      if (usingNetlifyBackend) await leaveNetlifyRoom({ roomCode: room.code, playerId });
+      else if (usingSupabaseBackend) await leaveSupabaseRoom({ room, playerId });
+      else setRoom(leaveLocalRoom(room, playerId));
+      const score = room.players.find((player) => player.id === playerId)?.score ?? 0;
+      await savePreviousScore(room.code, score);
+      if (wasPlaying) await markRoomEliminated(room.code);
+      else await markRoomLeft(room.code);
+      setHistory(await getPlayerHistory());
+      setRoom(null);
+      setScreen("home");
+    } catch (error) {
+      showToast(getErrorMessage(error, "Could not leave room."));
     }
-    if (usingSupabaseBackend && supabase && room) {
-      await supabase.from("players").update({ is_online: false, last_seen_at: new Date().toISOString() }).eq("id", playerId);
+  };
+
+  const managePlayer = async (action: "kick" | "eliminate" | "transfer", targetPlayerId: string) => {
+    if (!room) return;
+    try {
+      if (usingNetlifyBackend) {
+        const args = { roomCode: room.code, playerId, targetPlayerId };
+        if (action === "kick") await kickNetlifyPlayer(args);
+        else if (action === "eliminate") await eliminateNetlifyPlayer(args);
+        else await transferNetlifyHost(args);
+      } else if (usingSupabaseBackend) {
+        const args = { room, playerId, targetPlayerId };
+        if (action === "kick") await kickSupabasePlayer(args);
+        else if (action === "eliminate") await eliminateSupabasePlayer(args);
+        else await transferSupabaseHost(args);
+      } else {
+        const nextRoom = action === "kick" ? kickPlayer(room, playerId, targetPlayerId) : action === "eliminate" ? eliminatePlayerFromRound(room, targetPlayerId) : transferHost(room, playerId, targetPlayerId);
+        setRoom(nextRoom);
+      }
+      if (onlineMode) await syncRoom(room.code);
+      showToast(action === "kick" ? "Player removed." : action === "eliminate" ? "Player eliminated." : "Host transferred.");
+    } catch (error) {
+      showToast(getErrorMessage(error, "Player action failed."));
     }
-    setRoom(null);
-    setScreen("home");
+  };
+
+  const handleReturnToLobby = async () => {
+    if (!room) return;
+    try {
+      if (usingNetlifyBackend) await returnNetlifyRoomToLobby({ roomCode: room.code, playerId });
+      else if (usingSupabaseBackend) await returnSupabaseRoomToLobby({ room, playerId });
+      else setRoom(returnToLobby(room, playerId));
+      if (onlineMode) await syncRoom(room.code);
+      else setScreen("lobby");
+    } catch (error) {
+      showToast(getErrorMessage(error, "Waiting for host or next movie giver."));
+    }
   };
 
   let content;
@@ -399,7 +507,17 @@ export function GameApp() {
   else if (screen === "lobby" && room)
     content = (
       <>
-        <LobbyScreen room={room} currentPlayerId={playerId} supabaseConfigured={onlineMode} onSettingsChange={updateSettings} onSetup={beginSetup} onCopyInvite={copyInvite} onLeave={leave} />
+        <LobbyScreen
+          room={room}
+          currentPlayerId={playerId}
+          supabaseConfigured={onlineMode}
+          onSettingsChange={updateSettings}
+          onSetup={beginSetup}
+          onCopyInvite={copyInvite}
+          onLeave={leave}
+          onKick={(target) => managePlayer("kick", target)}
+          onTransferHost={(target) => managePlayer("transfer", target)}
+        />
         {!onlineMode ? (
           <button type="button" onClick={addLocalPlayer} className="fixed bottom-5 right-5 rounded-md bg-cinema-teal px-4 py-3 font-bold text-cinema-ink">
             Add local player
@@ -415,15 +533,32 @@ export function GameApp() {
         difficulty={room.settings.difficulty}
         canSetup={canSetup}
         movieGiverName={movieGiver?.name}
+        players={room.players}
+        currentPlayerId={playerId}
+        canManagePlayers={room.hostPlayerId === playerId}
+        onKick={(target) => managePlayer("kick", target)}
+        onTransferHost={(target) => managePlayer("transfer", target)}
         onStart={startWithHints}
         onCancel={canSetup ? cancelSetup : () => setScreen(room.round ? "result" : "lobby")}
       />
     );
   }
   else if (screen === "game" && room)
-    content = <GameScreen room={room} currentPlayerId={onlineMode ? playerId : room.currentTurnPlayerId ?? playerId} onLetterGuess={handleLetterGuess} onFullGuess={handleFullGuess} onSkip={handleSkip} />;
-  else if (screen === "result" && room) content = <ResultScreen room={room} currentPlayerId={playerId} localMode={!onlineMode} onNextRound={beginSetup} onLobby={() => setScreen("lobby")} />;
-  else content = <HomeScreen lastRoomCode={lastRoomCode} room={room} supabaseConfigured={onlineMode} onCreate={() => setScreen("create")} onJoin={() => setScreen("join")} onLastRoom={() => lastRoomCode && setScreen("join")} onHowToPlay={() => setHelpOpen(true)} />;
+    content = (
+      <GameScreen
+        room={room}
+        currentPlayerId={onlineMode ? playerId : room.currentTurnPlayerId ?? playerId}
+        onLetterGuess={handleLetterGuess}
+        onFullGuess={handleFullGuess}
+        onSkip={handleSkip}
+        onLeave={leave}
+        onKick={(target) => managePlayer("kick", target)}
+        onEliminate={(target) => managePlayer("eliminate", target)}
+        onTransferHost={(target) => managePlayer("transfer", target)}
+      />
+    );
+  else if (screen === "result" && room) content = <ResultScreen room={room} currentPlayerId={playerId} localMode={!onlineMode} onNextRound={beginSetup} onLobby={handleReturnToLobby} />;
+  else content = <HomeScreen lastRoomCode={lastRoomCode} room={room} history={history} supabaseConfigured={onlineMode} onCreate={() => setScreen("create")} onJoin={() => setScreen("join")} onLastRoom={() => lastRoomCode && setScreen("join")} onHowToPlay={() => setHelpOpen(true)} />;
 
   return (
     <>

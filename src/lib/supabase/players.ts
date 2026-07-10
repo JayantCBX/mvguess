@@ -11,7 +11,13 @@ export function mapPlayer(row: PlayerRow): Player {
     isHost: row.is_host,
     isOnline: row.is_online,
     joinedAt: row.joined_at,
-    lastSeenAt: row.last_seen_at
+    lastSeenAt: row.last_seen_at,
+    status: row.status ?? "active",
+    eliminatedAt: row.eliminated_at,
+    leftAt: row.left_at,
+    kickedAt: row.kicked_at,
+    kickedByPlayerId: row.kicked_by_player_id,
+    deviceId: row.device_id
   };
 }
 
