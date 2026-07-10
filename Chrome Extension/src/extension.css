@@ -1,0 +1,56 @@
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body.extension-popup {
+  width: 780px;
+  height: 600px;
+  min-width: 360px;
+  min-height: 600px;
+  overflow: auto;
+}
+
+body.extension-sidepanel {
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+.extension-bar {
+  position: sticky;
+  top: 0;
+  z-index: 60;
+  display: flex;
+  min-height: 52px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid rgba(255,255,255,.07);
+  background: rgba(7,11,18,.88);
+  padding: 8px 16px;
+  backdrop-filter: blur(18px);
+}
+
+.extension-panel-button {
+  display: inline-flex;
+  min-height: 36px;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid rgba(53,208,186,.24);
+  border-radius: 10px;
+  background: rgba(53,208,186,.08);
+  padding: 7px 11px;
+  color: #6ce8d4;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.extension-surface-popup .game-shell,
+.extension-surface-sidepanel .game-shell {
+  min-height: calc(100vh - 52px);
+}
+
+@media (max-width: 520px) {
+  .extension-bar { padding-inline: 12px; }
+}

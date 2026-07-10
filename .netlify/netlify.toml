@@ -1,15 +1,15 @@
-functionsDirectory = "C:\\Users\\admin\\Desktop\\AI\\Extension\\ChromeGame\\netlify\\functions"
+functionsDirectory = "D:\\Jayant\\MvGuess\\mvguess\\netlify\\functions"
 functionsDirectoryOrigin = "config-v1"
 redirectsOrigin = "config"
 plugins = []
 headers = []
 
 [build]
-publish = "C:\\Users\\admin\\Desktop\\AI\\Extension\\ChromeGame\\dist"
+publish = "D:\\Jayant\\MvGuess\\mvguess\\dist"
 publishOrigin = "config"
 commandOrigin = "config"
 command = "npm run build"
-functions = "C:\\Users\\admin\\Desktop\\AI\\Extension\\ChromeGame\\netlify\\functions"
+functions = "D:\\Jayant\\MvGuess\\mvguess\\netlify\\functions"
 
 [build.environment]
 NODE_VERSION = "20"

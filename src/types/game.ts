@@ -7,6 +7,7 @@ export type GuessVisibilityMode = "shared_public" | "private_secret";
 export type SecretScoreRevealMode = "live" | "round_end";
 export type LastPlayerStandingRule = "continue" | "auto_win";
 export type PlayerStatus = "active" | "left" | "eliminated" | "kicked";
+export type PlayerLimit = 2 | 3 | 4 | 5 | 6 | 7 | 8;
 
 export interface Movie {
   id: string;
@@ -39,7 +40,7 @@ export interface RoomSettings {
   lifeWord: LifeWord;
   timerSeconds: 15 | 30 | 45 | 60;
   wrongGuessPenalty: boolean;
-  maxPlayers: 2 | 3 | 4;
+  maxPlayers: PlayerLimit;
   guessVisibilityMode: GuessVisibilityMode;
   secretScoreRevealMode: SecretScoreRevealMode;
   lastPlayerStandingRule: LastPlayerStandingRule;
@@ -85,6 +86,13 @@ export const DEFAULT_ROOM_SETTINGS: RoomSettings = {
   responsiveWebMode: true
 };
 
+export function normalizeRoomSettings(settings?: Partial<RoomSettings> | null): RoomSettings {
+  const requestedLimit = Number(settings?.maxPlayers ?? DEFAULT_ROOM_SETTINGS.maxPlayers);
+  const finiteLimit = Number.isFinite(requestedLimit) ? requestedLimit : DEFAULT_ROOM_SETTINGS.maxPlayers;
+  const maxPlayers = Math.max(2, Math.min(8, Math.round(finiteLimit))) as PlayerLimit;
+  return { ...DEFAULT_ROOM_SETTINGS, ...settings, maxPlayers };
+}
+
 export interface PlayerRoundState {
   roomId: string;
   roundId: string;
@@ -96,6 +104,12 @@ export interface PlayerRoundState {
   isEliminated: boolean;
   pendingScore: number;
   lastGuessStatus?: "correct" | "wrong" | "skipped" | "solved" | null;
+  updatedAt: string;
+}
+
+export interface SpectatorRoundState {
+  playerId: string;
+  maskedMovie: string;
   updatedAt: string;
 }
 
@@ -137,6 +151,7 @@ export interface RoomState {
   guessedLetters: string[];
   wrongLetters: string[];
   playerRoundStates?: Record<string, PlayerRoundState>;
+  spectatorRoundState?: SpectatorRoundState;
   guessHistory?: GuessHistoryItem[];
   roundHistory?: RoundHistoryItem[];
   round?: RoundState;

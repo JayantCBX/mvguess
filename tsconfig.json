@@ -17,6 +17,6 @@
     "jsx": "react-jsx",
     "types": ["chrome", "vitest/globals"]
   },
-  "include": ["src", "netlify/functions", "vite.config.ts"],
+  "include": ["src", "netlify/functions", "Chrome Extension/src", "vite.config.ts"],
   "references": []
 }

@@ -49,8 +49,10 @@ function hasChromeStorage(): boolean {
 
 function normalizeProfile(value?: Partial<LocalProfile> | null): LocalProfile {
   return {
-    ...DEFAULT_PROFILE,
-    ...value,
+    deviceId: value?.deviceId ?? DEFAULT_PROFILE.deviceId,
+    playerId: value?.playerId ?? DEFAULT_PROFILE.playerId,
+    playerName: value?.playerName ?? DEFAULT_PROFILE.playerName,
+    lastRoomCode: value?.lastRoomCode ?? DEFAULT_PROFILE.lastRoomCode,
     settings: { ...DEFAULT_PROFILE.settings, ...value?.settings },
     history: {
       ...EMPTY_HISTORY,

@@ -17,7 +17,7 @@ export function HowToPlayModal({ open, onClose }: HowToPlayModalProps) {
           </button>
         </div>
         <div className="mt-4 space-y-3 text-sm leading-6 text-slate-300">
-          <p>Create or join a private room with 2 to 4 players. The host configures category, difficulty, timer, life word, and hints.</p>
+          <p>Create or join a private room with 2 to 8 players. The host configures capacity, category, difficulty, timer, life word, and hints.</p>
           <p>Players guess alphabets turn by turn. Correct letters reveal everywhere they appear. Wrong letter guesses deduct one life letter.</p>
           <p>A full movie guess can win the round immediately. A wrong full movie guess deducts two life letters.</p>
         </div>

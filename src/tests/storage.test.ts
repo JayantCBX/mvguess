@@ -23,6 +23,20 @@ describe("privacy-safe player memory", () => {
     expect(second).toBe(first);
   });
 
+  it("normalizes an empty fresh Chrome profile without undefined fields", async () => {
+    const chromeStorage = {
+      get: (_keys: string[], callback: (items: Record<string, unknown>) => void) => callback({}),
+      set: (_items: Record<string, unknown>, callback?: () => void) => callback?.()
+    };
+    Object.defineProperty(globalThis, "chrome", { value: { storage: { local: chromeStorage } }, configurable: true });
+
+    const profile = await getLocalProfile();
+    expect(profile.playerName).toBe("");
+    expect(profile.lastRoomCode).toBe("");
+
+    Reflect.deleteProperty(globalThis, "chrome");
+  });
+
   it("stores score and kicked-room history without cookies", async () => {
     await savePreviousScore("ABCDE", 75);
     await markRoomKicked("ABCDE");

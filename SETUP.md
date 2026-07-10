@@ -43,7 +43,7 @@ Do not put real keys in source control.
 
 ## Multiplayer QA
 
-For four-player testing, use four browser profiles/private windows so every player receives a different local device ID. Test these flows in both shared and private-secret mode:
+For capacity testing, select an eight-player room and use eight browser profiles/private windows so every player receives a different local device ID. Test these flows in both shared and private-secret mode:
 
 1. Host creates the room and three players join with unique names.
 2. Start setup, confirm only the movie giver can enter the title, and play several turns.

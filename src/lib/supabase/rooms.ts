@@ -1,4 +1,4 @@
-import { DEFAULT_ROOM_SETTINGS, type GuessHistoryItem, type PlayerRoundState, type RoundState, type RoomSettings, type RoomState } from "../../types/game";
+import { DEFAULT_ROOM_SETTINGS, normalizeRoomSettings, type GuessHistoryItem, type PlayerRoundState, type RoundState, type RoomSettings, type RoomState } from "../../types/game";
 import type { RoomRow, PlayerRow } from "../../types/supabase";
 import { generateRoomCode } from "../../utils/roomCode";
 import { sanitizePlayerName } from "../game/validation";
@@ -101,13 +101,13 @@ function mapRoom(row: RoomRow, players: PlayerRow[], round?: PublicRoundRow | nu
     code: row.code,
     hostPlayerId: row.host_player_id,
     status: row.status,
-    settings: {
+    settings: normalizeRoomSettings({
       ...defaultRoomSettings,
       ...(row.settings as Partial<RoomSettings>),
       category: row.category,
       difficulty: row.difficulty,
       lifeWord: row.life_word
-    },
+    }),
     players: players.map(mapPlayer),
     currentTurnPlayerId: row.current_turn_player_id,
     lifeRemaining: row.life_remaining,
@@ -167,6 +167,7 @@ export async function fetchRoomByCode(code: string, playerId?: string): Promise<
 
 export async function createOnlineRoom(playerId: string, playerName: string, settings: RoomSettings, deviceId?: string): Promise<OnlineRoomResult> {
   if (!supabase) throw new Error("Supabase is not configured.");
+  settings = normalizeRoomSettings(settings);
   const code = generateRoomCode();
   const now = new Date().toISOString();
   const effectivePlayerId = await getAvailablePlayerId(playerId);
@@ -254,6 +255,7 @@ export async function joinOnlineRoom(code: string, playerId: string, playerName:
 
 export async function updateOnlineRoomSettings(room: RoomState, settings: RoomSettings): Promise<void> {
   if (!supabase) return;
+  settings = normalizeRoomSettings(settings);
   await supabase
     .from("rooms")
     .update({

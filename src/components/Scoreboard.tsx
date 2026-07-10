@@ -9,11 +9,11 @@ export function Scoreboard({ players }: ScoreboardProps) {
   return (
     <div className="space-y-2">
       {sorted.map((player, index) => (
-        <div key={player.id} className="flex items-center justify-between rounded-md bg-white/5 px-3 py-2">
+        <div key={player.id} className="flex items-center justify-between rounded-xl border border-white/[0.06] bg-white/[0.035] px-3 py-3">
           <span className="text-sm text-slate-300">
             #{index + 1} <span className="font-semibold text-white">{player.name}</span>
           </span>
-          <span className="font-black text-cinema-gold">{player.score}</span>
+          <span className="font-black tabular-nums text-cinema-gold">{player.score}<span className="ml-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">pts</span></span>
         </div>
       ))}
     </div>

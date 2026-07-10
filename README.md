@@ -1,5 +1,7 @@
 # Movie Guess Battle
 
+The complete Chrome MV3 popup and side-panel package lives in [`Chrome Extension`](./Chrome%20Extension). Build it with `npm run build:extension`, then load `Chrome Extension/dist` as an unpacked extension.
+
 Movie Guess Battle is a Manifest V3 Chrome Extension MVP for a private-room multiplayer movie guessing game inspired by the Indian paper movie guessing game. The popup is only a launcher; gameplay opens in `game.html` as a full extension page/new tab.
 
 ## Features
@@ -68,13 +70,13 @@ With the Netlify backend deployed:
 1. Deploy to Netlify.
 2. Open the site URL.
 3. Create a room and copy the invite link or room code.
-4. Share the invite link with 2 to 4 players, or have them open `game.html?action=join` and enter the room code.
+4. Choose a room capacity from 2 to 8, then share the invite link or have players open `game.html?action=join` and enter the room code.
 5. Each player joins with a unique name and waits in the lobby.
 6. The host enters the first movie. After that round ends, the next player shown on the result screen enters the next movie.
 
-### Four-player and secret-mode testing
+### Multi-player and secret-mode testing
 
-Open the deployed game in four separate browser profiles or private windows so each has its own anonymous device ID. Create a four-player room, choose **Private secret**, leave score reveal on **Round end**, and verify that each guesser sees only their own letters, life, mask, and detailed history. Other players should see only a neutral turn event. Use the host player menu to test kick, eliminate, and host transfer. After the result, use **Lobby** and verify every client remains in the lobby instead of returning to the result screen.
+Open the deployed game in separate browser profiles or private windows so each player has a different anonymous device ID. For capacity testing, select **8 players** and join eight sessions. Choose **Private secret**, leave score reveal on **Round end**, and verify that each guesser sees only their own letters, life, mask, and detailed history. Other players should see only a neutral turn event. Use the host player menu to test kick, eliminate, and host transfer. After the result, use **Lobby** and verify every client remains in the lobby instead of returning to the result screen.
 
 ## Privacy-safe player memory
 

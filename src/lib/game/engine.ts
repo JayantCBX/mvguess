@@ -11,6 +11,7 @@ import type {
   RoomSettings,
   RoomState
 } from "../../types/game";
+import { normalizeRoomSettings } from "../../types/game";
 import type { HintSettings } from "../../types/hints";
 import { generateRoomCode } from "../../utils/roomCode";
 import { applyHintPositions, defaultHintSettings } from "./hints";
@@ -50,15 +51,16 @@ export function createLocalPlayer(name: string, isHost = false, deviceId?: strin
 export function createInitialRoom(host: Player, settings: RoomSettings): RoomState {
   const now = new Date().toISOString();
   const hostPlayer = { ...host, isHost: true, status: "active" as const };
+  const normalizedSettings = normalizeRoomSettings(settings);
   return {
     id: crypto.randomUUID(),
     code: generateRoomCode(),
     hostPlayerId: hostPlayer.id,
     status: "lobby",
-    settings,
+    settings: normalizedSettings,
     players: [hostPlayer],
     currentTurnPlayerId: null,
-    lifeRemaining: settings.lifeWord.length,
+    lifeRemaining: normalizedSettings.lifeWord.length,
     maskedMovie: "",
     guessedLetters: [],
     wrongLetters: [],
@@ -514,15 +516,26 @@ export function returnToLobby(room: RoomState, playerId?: string): RoomState {
 export function getVisibleRoomForPlayer(room: RoomState, playerId?: string): RoomState {
   const isRoundOver = room.status === "round_over";
   const isMovieGiver = playerId && room.round?.movieGiverPlayerId === playerId;
+  const isHost = playerId && room.hostPlayerId === playerId;
   const playerState = playerId ? room.playerRoundStates?.[playerId] : undefined;
   const secret = room.settings.guessVisibilityMode === "private_secret";
+  const lastPrivateGuess = [...(room.guessHistory ?? [])].reverse().find((item) => item.visibility === "private");
+  const observedPlayerId = lastPrivateGuess?.playerId ?? room.currentTurnPlayerId ?? undefined;
+  const observedState = (isHost || isMovieGiver) && observedPlayerId && observedPlayerId !== playerId
+    ? room.playerRoundStates?.[observedPlayerId]
+    : undefined;
+  const spectatorRoundState = observedState ? {
+    playerId: observedState.playerId,
+    maskedMovie: observedState.maskedMovie,
+    updatedAt: observedState.updatedAt
+  } : undefined;
   const round = room.round ? {
     ...room.round,
     movieTitlePrivate: isRoundOver || isMovieGiver ? room.round.movieTitlePrivate : undefined,
     movieDisplay: isRoundOver || isMovieGiver ? room.round.movieDisplay : undefined
   } : undefined;
   const safePlayers = room.players.map((player) => ({ ...player, deviceId: null }));
-  if (!secret) return { ...room, players: safePlayers, round, playerRoundStates: undefined };
+  if (!secret) return { ...room, players: safePlayers, round, playerRoundStates: undefined, spectatorRoundState: undefined };
   const guessHistory = (room.guessHistory ?? []).filter((item) => item.visibility === "public" || item.playerId === playerId);
   return {
     ...room,
@@ -533,6 +546,7 @@ export function getVisibleRoomForPlayer(room: RoomState, playerId?: string): Roo
     wrongLetters: isRoundOver ? room.wrongLetters : playerState?.wrongLetters ?? [],
     lifeRemaining: isRoundOver ? room.lifeRemaining : playerState?.lifeRemaining ?? room.settings.lifeWord.length,
     playerRoundStates: playerState && playerId ? { [playerId]: playerState } : {},
+    spectatorRoundState: isRoundOver ? undefined : spectatorRoundState,
     guessHistory
   };
 }

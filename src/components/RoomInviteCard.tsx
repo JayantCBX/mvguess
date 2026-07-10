@@ -1,4 +1,5 @@
 import { Copy, Link as LinkIcon } from "lucide-react";
+import { getRoomInviteUrl } from "../utils/invite";
 
 interface RoomInviteCardProps {
   code: string;
@@ -6,7 +7,7 @@ interface RoomInviteCardProps {
 }
 
 export function RoomInviteCard({ code, onCopy }: RoomInviteCardProps) {
-  const invite = `${location.origin}${location.pathname}?room=${code}`;
+  const invite = getRoomInviteUrl(code);
   return (
     <div className="rounded-lg border border-white/10 bg-white/5 p-4">
       <div className="flex items-center justify-between gap-3">

@@ -1,7 +1,7 @@
 import type { Config } from "tailwindcss";
 
 export default {
-  content: ["./popup.html", "./game.html", "./src/**/*.{ts,tsx}"],
+  content: ["./popup.html", "./game.html", "./src/**/*.{ts,tsx}", "./Chrome Extension/**/*.{html,ts,tsx}"],
   theme: {
     extend: {
       colors: {

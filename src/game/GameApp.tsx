@@ -75,6 +75,7 @@ import { LobbyScreen } from "../screens/LobbyScreen";
 import { ResultScreen } from "../screens/ResultScreen";
 import type { Player, RoomSettings, RoomState } from "../types/game";
 import type { HintSettings } from "../types/hints";
+import { getRoomInviteUrl } from "../utils/invite";
 
 type Screen = "home" | "create" | "join" | "lobby" | "setup" | "game" | "result";
 
@@ -154,7 +155,7 @@ export function GameApp() {
       if (params.get("help")) setHelpOpen(true);
       if (params.get("action") === "create") setScreen("create");
       if (params.get("action") === "join") setScreen("join");
-      const roomCode = params.get("room");
+      const roomCode = params.get("room") ?? (location.protocol === "chrome-extension:" ? profile.lastRoomCode : "");
       if (roomCode) {
         setLastRoomCode(roomCode);
         setScreen("join");
@@ -187,7 +188,7 @@ export function GameApp() {
 
   useEffect(() => {
     if (!room || !usingNetlifyBackend) return;
-    const interval = window.setInterval(() => syncRoom(room.code), 1800);
+    const interval = window.setInterval(() => syncRoom(room.code), 1000);
     return () => window.clearInterval(interval);
   }, [room?.code, syncRoom, usingNetlifyBackend]);
 
@@ -440,7 +441,7 @@ export function GameApp() {
 
   const copyInvite = async () => {
     if (!room) return;
-    const invite = `${location.origin}${location.pathname}?room=${room.code}`;
+    const invite = getRoomInviteUrl(room.code);
     await navigator.clipboard?.writeText(invite);
     showToast("Invite copied.");
   };

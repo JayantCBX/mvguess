@@ -1,6 +1,6 @@
 # Game Rules
 
-- 2 to 4 players per room.
+- 2 to 8 players per room, with capacity selected by the host.
 - Exactly one host per room.
 - Host chooses category, difficulty, life word, timer, and hint settings.
 - The host gives the first custom movie title.
@@ -26,6 +26,7 @@
 - **Shared public** is the classic default: mask, guessed letters, wrong letters, life, and scores are shared.
 - **Private secret** gives every guesser a private mask, letter lists, life count, and detailed guess history.
 - Secret guesses produce only neutral events for other players. The movie giver never guesses.
+- The host and current movie giver can monitor the latest guesser's correctly revealed mask; wrong letters, life, pending score, and detailed guess history remain private.
 - With round-end score reveal, points remain private until the round finishes.
 - A secret player whose life reaches zero is eliminated while remaining guessers continue.
 - The host can configure the last remaining guesser to continue or win automatically.

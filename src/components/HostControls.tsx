@@ -45,6 +45,12 @@ export function HostControls({ settings, disabled, settingsDisabled, onChange, o
           <select aria-label="Turn timer" disabled={settingsDisabled} value={settings.timerSeconds} onChange={(event) => patch({ timerSeconds: Number(event.target.value) as RoomSettings["timerSeconds"] })} className={selectClass}>
             <option value={15}>15 seconds</option><option value={30}>30 seconds</option><option value={45}>45 seconds</option><option value={60}>60 seconds</option>
           </select>
+          <label className="grid gap-1 text-xs font-bold uppercase tracking-[0.12em] text-slate-400">
+            Player capacity
+            <select aria-label="Player capacity" disabled={settingsDisabled} value={settings.maxPlayers} onChange={(event) => patch({ maxPlayers: Number(event.target.value) as RoomSettings["maxPlayers"] })} className={`${selectClass} text-base font-bold normal-case tracking-normal text-white`}>
+              {[2, 3, 4, 5, 6, 7, 8].map((limit) => <option key={limit} value={limit}>{limit} players</option>)}
+            </select>
+          </label>
         </div>
       </details>
 

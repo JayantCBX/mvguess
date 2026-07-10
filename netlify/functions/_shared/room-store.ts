@@ -14,7 +14,7 @@ import {
   transferHost
 } from "../../../src/lib/game/engine";
 import { getNextMovieGiver, isActivePlayer } from "../../../src/lib/game/turns";
-import { DEFAULT_ROOM_SETTINGS, type GuessType, type Player, type RoomSettings, type RoomState } from "../../../src/types/game";
+import { normalizeRoomSettings, type GuessType, type Player, type RoomSettings, type RoomState } from "../../../src/types/game";
 import type { HintSettings } from "../../../src/types/hints";
 import { generateRoomCode } from "../../../src/utils/roomCode";
 import { sanitizePlayerName } from "../../../src/lib/game/validation";
@@ -30,7 +30,7 @@ async function loadRoom(code: string): Promise<RoomState | null> {
   if (!stored) return null;
   return {
     ...stored,
-    settings: { ...DEFAULT_ROOM_SETTINGS, ...stored.settings },
+    settings: normalizeRoomSettings(stored.settings),
     players: stored.players.map((player) => ({ ...player, status: player.status ?? (player.isOnline ? "active" : "left") })),
     playerRoundStates: stored.playerRoundStates ?? {},
     guessHistory: stored.guessHistory ?? [],
@@ -137,7 +137,8 @@ export async function joinRoom(args: { code: string; playerId?: string; deviceId
 export async function updateSettings(args: { code: string; playerId: string; settings: RoomSettings }): Promise<RoomState> {
   const room = assertRoom(await loadRoom(args.code));
   if (room.hostPlayerId !== args.playerId) throw new Error("Only the host can update settings.");
-  return saveVisible({ ...room, settings: args.settings, lifeRemaining: args.settings.lifeWord.length }, args.playerId);
+  const settings = normalizeRoomSettings(args.settings);
+  return saveVisible({ ...room, settings, lifeRemaining: settings.lifeWord.length }, args.playerId);
 }
 
 export async function beginSetup(args: { code: string; playerId: string }): Promise<RoomState> {

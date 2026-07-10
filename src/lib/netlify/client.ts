@@ -1,7 +1,9 @@
-export const isNetlifyBackendConfigured = import.meta.env.VITE_ONLINE_BACKEND === "netlify";
+const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/$/, "");
+
+export const isNetlifyBackendConfigured = import.meta.env.VITE_ONLINE_BACKEND === "netlify" || Boolean(apiBaseUrl);
 
 export async function apiRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const response = await fetch(path, {
+  const response = await fetch(`${apiBaseUrl}${path}`, {
     ...init,
     headers: {
       "Content-Type": "application/json",

@@ -11,7 +11,7 @@ import {
   submitLetterGuess,
   transferHost
 } from "../lib/game/engine";
-import { DEFAULT_ROOM_SETTINGS, type RoomSettings } from "../types/game";
+import { DEFAULT_ROOM_SETTINGS, normalizeRoomSettings, type RoomSettings } from "../types/game";
 
 function makeRoom(overrides: Partial<RoomSettings> = {}) {
   const host = { ...createLocalPlayer("Host", true), id: "host" };
@@ -23,6 +23,12 @@ function makeRoom(overrides: Partial<RoomSettings> = {}) {
 }
 
 describe("advanced game modes", () => {
+  it("supports host-selected room capacities up to eight players", () => {
+    expect(normalizeRoomSettings({ maxPlayers: 8 }).maxPlayers).toBe(8);
+    expect(normalizeRoomSettings({ maxPlayers: 7 }).maxPlayers).toBe(7);
+    expect(normalizeRoomSettings({ maxPlayers: 99 as RoomSettings["maxPlayers"] }).maxPlayers).toBe(8);
+  });
+
   it("keeps shared public wrong guesses visible to the room", () => {
     const room = makeRoom();
     const result = submitLetterGuess(room, "amit", "z");
@@ -56,6 +62,18 @@ describe("advanced game modes", () => {
     expect(result.room.maskedMovie).toBe("_____");
     expect(result.room.playerRoundStates?.amit.maskedMovie).toBe("__OO_");
     expect(result.room.playerRoundStates?.neha.maskedMovie).toBe("_____");
+  });
+
+  it("shows the latest correct reveal to the host and movie giver without exposing private guess details", () => {
+    const room = makeRoom({ guessVisibilityMode: "private_secret" });
+    const result = submitLetterGuess(room, "amit", "o").room;
+    const hostView = getVisibleRoomForPlayer(result, "host");
+    const otherPlayerView = getVisibleRoomForPlayer(result, "neha");
+
+    expect(hostView.spectatorRoundState).toEqual(expect.objectContaining({ playerId: "amit", maskedMovie: "__OO_" }));
+    expect(hostView.playerRoundStates?.amit).toBeUndefined();
+    expect(otherPlayerView.spectatorRoundState).toBeUndefined();
+    expect(otherPlayerView.playerRoundStates?.amit).toBeUndefined();
   });
 
   it("reveals secret pending scores only when the round ends", () => {

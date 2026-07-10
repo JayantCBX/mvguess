@@ -14,16 +14,16 @@ interface PlayerListProps {
 
 export function PlayerList({ players, currentTurnPlayerId, currentPlayerId, roomStatus, canManage, onKick, onEliminate, onTransferHost }: PlayerListProps) {
   return (
-    <div className="space-y-2">
+    <div className="max-h-[30rem] space-y-2 overflow-y-auto pr-1 [scrollbar-color:rgba(148,163,184,.35)_transparent]">
       {players.map((player) => {
         const status = player.status ?? (player.isOnline ? "active" : "left");
         const self = player.id === currentPlayerId;
         return (
-          <div key={player.id} className={`flex min-h-12 items-center justify-between gap-2 rounded-md border px-3 py-2 ${player.id === currentTurnPlayerId ? "border-cinema-gold bg-cinema-gold/10" : "border-white/10 bg-white/5"}`}>
+          <div key={player.id} className={`flex min-h-14 items-center justify-between gap-2 rounded-xl border px-3 py-2.5 transition ${player.id === currentTurnPlayerId ? "border-cinema-teal/50 bg-cinema-teal/10 shadow-[0_0_24px_rgba(53,208,186,0.08)]" : "border-white/[0.07] bg-white/[0.035]"}`}>
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${player.isOnline && status === "active" ? "bg-cinema-teal" : status === "kicked" ? "bg-cinema-rose" : "bg-slate-500"}`} />
-                <span className="truncate font-medium">{player.name}</span>
+                <span className="truncate font-bold">{player.name}</span>
                 {player.isHost ? <Crown className="h-4 w-4 shrink-0 text-cinema-gold" aria-label="Host" /> : null}
               </div>
               <span className="ml-[18px] text-[11px] uppercase tracking-wide text-slate-400">{status}</span>

@@ -1,18 +1,20 @@
-# Load The Chrome Extension
+# Load Movie Guess Battle in Chrome
 
-## Build
+The complete Manifest V3 extension is in `Chrome Extension`. Both the toolbar popup and side panel run the full game and share rooms with the deployed web app.
+
+## Build and load
 
 ```bash
-npm run build
+npm install
+npm run build:extension
 ```
 
-## Load Unpacked
+1. Open `chrome://extensions` in Chrome 116 or newer.
+2. Enable **Developer mode**.
+3. Click **Load unpacked**.
+4. Select `Chrome Extension/dist`.
+5. Pin **Movie Guess Battle**.
 
-1. Open `chrome://extensions`.
-2. Enable Developer mode.
-3. Click `Load unpacked`.
-4. Select the generated `dist` folder.
-5. Pin Movie Guess Battle.
-6. Click the extension icon and launch the full game page.
+Click the toolbar icon to play in the popup. Click **Side panel** in the popup header for the persistent side-panel version.
 
-The popup is intentionally small and only launches `game.html` in a new tab.
+See `Chrome Extension/README.md` for permissions, build structure, and web/extension multiplayer instructions.
