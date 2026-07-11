@@ -4,6 +4,21 @@ body,
   min-height: 100%;
 }
 
+:root { font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+.extension-actions { display: flex; gap: 8px; }
+.extension-status, .privacy-card { margin: 24px auto; max-width: 620px; padding: 24px; }
+.privacy-card { border: 1px solid rgba(255,255,255,.12); border-radius: 18px; background: #101827; box-shadow: 0 20px 60px rgba(0,0,0,.35); }
+.privacy-card h1 { margin: 0 0 12px; font-size: 24px; }
+.privacy-card p, .privacy-card li { color: #cbd5e1; line-height: 1.55; }
+.privacy-links, .privacy-buttons { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 18px; }
+.privacy-links a { color: #6ce8d4; text-decoration: underline; text-underline-offset: 3px; }
+.privacy-primary, .privacy-secondary, .privacy-danger { min-height: 44px; border-radius: 10px; padding: 10px 16px; font-weight: 800; }
+.privacy-primary { border: 0; background: #35d0ba; color: #071018; }
+.privacy-secondary { border: 1px solid rgba(255,255,255,.2); background: transparent; color: #f8fafc; }
+.privacy-danger { border: 1px solid #e5576f; background: rgba(229,87,111,.1); color: #ff9baa; }
+.privacy-card button:focus-visible, .privacy-card a:focus-visible, .extension-panel-button:focus-visible { outline: 3px solid #f4c95d; outline-offset: 3px; }
+.privacy-overlay { position: fixed; inset: 0; z-index: 100; overflow: auto; background: rgba(2,6,12,.88); padding: 12px; }
+
 body.extension-popup {
   width: 780px;
   height: 600px;

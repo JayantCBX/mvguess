@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Movie Guess Battle",
-  "description": "Play real-time private-room movie battles from the Chrome popup or side panel.",
-  "version": "0.2.1",
+  "description": "Play private multiplayer movie guessing battles with friends from the Chrome popup or side panel.",
+  "version": "0.2.2",
   "minimum_chrome_version": "116",
   "action": {
     "default_title": "Movie Guess Battle",
@@ -23,6 +23,6 @@
   "permissions": ["storage", "sidePanel"],
   "host_permissions": ["https://movie-guess-battle.netlify.app/*"],
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'; connect-src 'self' https://movie-guess-battle.netlify.app; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:"
+    "extension_pages": "script-src 'self'; object-src 'self'; connect-src 'self' https://movie-guess-battle.netlify.app; style-src 'self'; font-src 'self'; img-src 'self' data:;"
   }
 }

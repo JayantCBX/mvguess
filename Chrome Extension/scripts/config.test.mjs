@@ -1,0 +1,2 @@
+import test from "node:test"; import assert from "node:assert/strict"; import fs from "node:fs";
+test("production manifest stays narrowly scoped", () => { const m = JSON.parse(fs.readFileSync(new URL("../public/manifest.json", import.meta.url))); assert.equal(m.manifest_version, 3); assert.deepEqual(m.permissions, ["storage", "sidePanel"]); assert.deepEqual(m.host_permissions, ["https://movie-guess-battle.netlify.app/*"]); assert.ok(!m.content_security_policy.extension_pages.includes("unsafe-eval")); });
