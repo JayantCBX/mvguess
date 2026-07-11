@@ -11,7 +11,7 @@ interface LobbyScreenProps {
   currentPlayerId: string;
   supabaseConfigured: boolean;
   onSettingsChange: (settings: RoomSettings) => void;
-  onSetup: () => void;
+  onSetup: (movieGiverPlayerId?: string) => void;
   onCopyInvite: () => void;
   onLeave: () => void;
   onKick?: (playerId: string) => void;
@@ -23,7 +23,9 @@ export function LobbyScreen({ room, currentPlayerId, supabaseConfigured, onSetti
   const isHost = room.hostPlayerId === currentPlayerId;
   const enoughPlayers = room.players.filter((player) => player.isOnline && (player.status ?? "active") === "active").length >= 2;
   const nextMovieGiverId = getNextMovieGiver(room.players, room.round?.movieGiverPlayerId, room.hostPlayerId);
-  const canBeginSetup = room.status === "round_over" ? nextMovieGiverId === currentPlayerId : isHost;
+  const activePlayers = room.players.filter((player) => player.isOnline && (player.status ?? "active") === "active");
+  const [selectedMovieGiverId, setSelectedMovieGiverId] = useState(nextMovieGiverId);
+  const effectiveMovieGiverId = activePlayers.some((player) => player.id === selectedMovieGiverId) ? selectedMovieGiverId : nextMovieGiverId;
 
   return (
     <main className="mx-auto grid min-h-screen max-w-6xl gap-5 p-4 pt-8 lg:grid-cols-[1fr_340px]">
@@ -41,11 +43,11 @@ export function LobbyScreen({ room, currentPlayerId, supabaseConfigured, onSetti
           </div>
         </div>
         <RoomInviteCard code={room.code} onCopy={onCopyInvite} />
-        {canBeginSetup ? (
-          <HostControls settings={room.settings} disabled={!enoughPlayers} settingsDisabled={!isHost} onChange={onSettingsChange} onSetup={onSetup} />
+        {isHost ? (
+          <HostControls settings={room.settings} disabled={!enoughPlayers} settingsDisabled={false} onChange={onSettingsChange} onSetup={onSetup} players={activePlayers} movieGiverPlayerId={effectiveMovieGiverId} onMovieGiverChange={setSelectedMovieGiverId} />
         ) : (
           <div className="rounded-lg border border-white/10 bg-white/5 p-4 text-slate-300">
-            {room.status === "round_over" ? "Waiting for the next movie giver to start setup." : "Only the host can change settings and start setup."}
+            Waiting for the host to choose a movie giver and start setup.
           </div>
         )}
         {!enoughPlayers ? (

@@ -60,7 +60,7 @@ export default async (request: Request, context: Context) => {
       return json(await updateSettings({ code, playerId, settings: body.settings as never }));
     }
     if (action === "setup" && request.method === "POST") {
-      return json(await beginSetup({ code, playerId }));
+      return json(await beginSetup({ code, playerId, movieGiverPlayerId: text(body.movieGiverPlayerId) || undefined }));
     }
     if (action === "setup" && request.method === "DELETE") {
       return json(await cancelSetup({ code, playerId }));

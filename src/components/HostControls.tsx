@@ -1,11 +1,15 @@
 import type { RoomSettings } from "../types/game";
+import type { Player } from "../types/game";
 
 interface HostControlsProps {
   settings: RoomSettings;
   disabled?: boolean;
   settingsDisabled?: boolean;
   onChange: (settings: RoomSettings) => void;
-  onSetup: () => void;
+  onSetup: (movieGiverPlayerId?: string) => void;
+  players?: Player[];
+  movieGiverPlayerId?: string | null;
+  onMovieGiverChange?: (playerId: string) => void;
 }
 
 interface ToggleProps {
@@ -24,7 +28,7 @@ function Toggle({ label, checked, disabled, onChange }: ToggleProps) {
   );
 }
 
-export function HostControls({ settings, disabled, settingsDisabled, onChange, onSetup }: HostControlsProps) {
+export function HostControls({ settings, disabled, settingsDisabled, onChange, onSetup, players, movieGiverPlayerId, onMovieGiverChange }: HostControlsProps) {
   const patch = (changes: Partial<RoomSettings>) => onChange({ ...settings, ...changes });
   const selectClass = "min-h-11 rounded-md border border-white/10 bg-cinema-ink px-3 py-2 disabled:opacity-50";
   const sectionClass = "group rounded-lg border border-white/10 bg-white/[0.04] p-3 open:bg-white/[0.06]";
@@ -113,7 +117,17 @@ export function HostControls({ settings, disabled, settingsDisabled, onChange, o
         </div>
       </details>
 
-      <button type="button" disabled={disabled} onClick={onSetup} className="min-h-11 w-full rounded-md bg-cinema-gold px-4 py-3 font-black text-cinema-ink disabled:opacity-50">
+      {players?.length && onMovieGiverChange ? (
+        <label className="grid gap-1 rounded-lg border border-cinema-gold/30 bg-cinema-gold/5 p-3 text-xs font-bold uppercase tracking-[0.12em] text-cinema-gold">
+          Choose movie giver
+          <select aria-label="Choose movie giver" value={movieGiverPlayerId ?? ""} onChange={(event) => onMovieGiverChange(event.target.value)} className={`${selectClass} text-base font-bold normal-case tracking-normal text-white`}>
+            {players.map((player) => <option key={player.id} value={player.id}>{player.name}{player.isHost ? " (Host)" : ""}</option>)}
+          </select>
+          <span className="font-normal normal-case tracking-normal text-slate-300">The host can still enter the movie and start the round if needed.</span>
+        </label>
+      ) : null}
+
+      <button type="button" disabled={disabled} onClick={() => onSetup(movieGiverPlayerId ?? undefined)} className="min-h-11 w-full rounded-md bg-cinema-gold px-4 py-3 font-black text-cinema-ink disabled:opacity-50">
         Start setup
       </button>
     </div>

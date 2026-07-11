@@ -19,14 +19,21 @@ import type { HintSettings } from "../../../src/types/hints";
 import { generateRoomCode } from "../../../src/utils/roomCode";
 import { sanitizePlayerName } from "../../../src/lib/game/validation";
 
-const store = getStore({ name: "movie-guess-rooms", consistency: "strong" });
+function getRoomStore() {
+  const runtime = globalThis as typeof globalThis & { process?: { env?: Record<string, string | undefined> } };
+  const siteID = runtime.process?.env?.MGB_BLOBS_SITE_ID;
+  const token = runtime.process?.env?.MGB_BLOBS_TOKEN;
+  return siteID && token
+    ? getStore({ name: "movie-guess-rooms", consistency: "strong", siteID, token })
+    : getStore({ name: "movie-guess-rooms", consistency: "strong" });
+}
 
 function roomKey(code: string): string {
   return `rooms/${code.toUpperCase()}`;
 }
 
 async function loadRoom(code: string): Promise<RoomState | null> {
-  const stored = (await store.get(roomKey(code), { type: "json" })) as RoomState | null;
+  const stored = (await getRoomStore().get(roomKey(code), { type: "json" })) as RoomState | null;
   if (!stored) return null;
   return {
     ...stored,
@@ -40,7 +47,7 @@ async function loadRoom(code: string): Promise<RoomState | null> {
 
 async function saveRoom(room: RoomState): Promise<RoomState> {
   const nextRoom = { ...room, updatedAt: new Date().toISOString() };
-  await store.setJSON(roomKey(nextRoom.code), nextRoom);
+  await getRoomStore().setJSON(roomKey(nextRoom.code), nextRoom);
   return nextRoom;
 }
 
@@ -141,17 +148,20 @@ export async function updateSettings(args: { code: string; playerId: string; set
   return saveVisible({ ...room, settings, lifeRemaining: settings.lifeWord.length }, args.playerId);
 }
 
-export async function beginSetup(args: { code: string; playerId: string }): Promise<RoomState> {
+export async function beginSetup(args: { code: string; playerId: string; movieGiverPlayerId?: string }): Promise<RoomState> {
   const loadedRoom = assertRoom(await loadRoom(args.code));
   const room = {
     ...loadedRoom,
     players: loadedRoom.players.map((player) => player.status === "eliminated" && player.isOnline ? { ...player, status: "active" as const } : player)
   };
-  assertCurrentPlayer(room, args.playerId);
+  const actor = assertCurrentPlayer(room, args.playerId);
   if (!["lobby", "round_over"].includes(room.status)) throw new Error("Round setup is not available.");
   if (room.players.filter(isActivePlayer).length < 2) throw new Error("Minimum 2 online players required.");
-  const movieGiverId = getNextMovieGiver(room.players, room.round?.movieGiverPlayerId, room.hostPlayerId);
-  if (movieGiverId !== args.playerId) {
+  const automaticMovieGiverId = getNextMovieGiver(room.players, room.round?.movieGiverPlayerId, room.hostPlayerId);
+  const requestedMovieGiver = args.movieGiverPlayerId ? room.players.find((player) => player.id === args.movieGiverPlayerId && isActivePlayer(player)) : undefined;
+  if (args.movieGiverPlayerId && !requestedMovieGiver) throw new Error("Choose an active player as movie giver.");
+  const movieGiverId = actor.isHost ? (requestedMovieGiver?.id ?? automaticMovieGiverId) : automaticMovieGiverId;
+  if (!actor.isHost && movieGiverId !== args.playerId) {
     const giver = room.players.find((player) => player.id === movieGiverId);
     throw new Error(`Only ${giver?.name ?? "the next movie giver"} can set the next movie.`);
   }
@@ -170,7 +180,7 @@ export async function startOnlineRound(args: { code: string; playerId: string; m
   assertCurrentPlayer(room, args.playerId);
   if (!["setup", "lobby", "round_over"].includes(room.status)) throw new Error("Round setup is not available.");
   const giver = room.status === "setup" ? room.currentTurnPlayerId : getNextMovieGiver(room.players, room.round?.movieGiverPlayerId, room.hostPlayerId);
-  if (giver !== args.playerId) throw new Error("Only the assigned movie giver can start this round.");
+  if (giver !== args.playerId && room.hostPlayerId !== args.playerId) throw new Error("Only the assigned movie giver or host can start this round.");
   if (!/[a-z]/i.test(args.movieTitle.trim()) || args.movieTitle.trim().length < 2) throw new Error("Movie title is required.");
   return saveVisible(startRound(room, { title: args.movieTitle }, args.hintPositions, args.hintSettings, giver), args.playerId);
 }

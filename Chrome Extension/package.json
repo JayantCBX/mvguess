@@ -6,7 +6,7 @@
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "lint": "npm run typecheck",
-    "test": "node --test scripts/*.test.mjs",
+    "test": "node --test scripts/*.node-test.mjs",
     "build": "vite build --config vite.config.ts",
     "cws:audit": "node scripts/cws-audit.mjs",
     "package:cws": "npm run build && npm run cws:audit && node scripts/package-cws.mjs"

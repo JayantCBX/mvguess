@@ -293,7 +293,7 @@ export function GameApp() {
     setRoom({ ...room, players: [...room.players, player] });
   };
 
-  const beginSetup = async () => {
+  const beginSetup = async (selectedMovieGiverId?: string) => {
     if (!room) return;
     if (room.players.filter((player) => player.isOnline && (player.status ?? "active") === "active").length < 2) {
       showToast(onlineMode ? "Minimum 2 players required." : "Add a local test player first.");
@@ -301,7 +301,7 @@ export function GameApp() {
     }
     try {
       if (onlineMode) {
-        if (usingNetlifyBackend) await beginNetlifyRoundSetup({ room, playerId });
+        if (usingNetlifyBackend) await beginNetlifyRoundSetup({ room, playerId, movieGiverPlayerId: selectedMovieGiverId });
         else {
           await beginSupabaseRoundSetup({ room, playerId });
           await broadcastRoomEvent(channel, "round_hint_locked", { roomCode: room.code });
@@ -311,7 +311,7 @@ export function GameApp() {
       }
 
       const players = room.players.map((player) => player.status === "eliminated" && player.isOnline ? { ...player, status: "active" as const } : player);
-      const movieGiverId = getNextMovieGiver(players, room.round?.movieGiverPlayerId, room.hostPlayerId);
+      const movieGiverId = selectedMovieGiverId && players.some((player) => player.id === selectedMovieGiverId) ? selectedMovieGiverId : getNextMovieGiver(players, room.round?.movieGiverPlayerId, room.hostPlayerId);
       const nextRoom = { ...room, players, status: "setup" as const, currentTurnPlayerId: movieGiverId, updatedAt: new Date().toISOString() };
       setRoom(nextRoom);
       setScreen("setup");
@@ -528,7 +528,7 @@ export function GameApp() {
     );
   else if (screen === "setup" && room) {
     const movieGiver = room.players.find((player) => player.id === room.currentTurnPlayerId);
-    const canSetup = room.currentTurnPlayerId === playerId || !onlineMode;
+    const canSetup = room.currentTurnPlayerId === playerId || room.hostPlayerId === playerId || !onlineMode;
     content = (
       <HintSetupScreen
         difficulty={room.settings.difficulty}

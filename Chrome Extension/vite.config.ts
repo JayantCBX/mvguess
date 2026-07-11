@@ -11,6 +11,16 @@ export default defineConfig({
   plugins: [
     react(),
     {
+      name: "extension-netlify-client",
+      enforce: "pre",
+      resolveId(source, importer) {
+        const normalizedImporter = importer?.replaceAll("\\\\", "/") ?? "";
+        if (source === "./client" && normalizedImporter.includes("/src/lib/netlify/")) {
+          return fileURLToPath(new URL("src/lib/apiClient.ts", import.meta.url));
+        }
+      }
+    },
+    {
       name: "extension-remove-remote-fonts",
       enforce: "pre",
       transform(code, id) {

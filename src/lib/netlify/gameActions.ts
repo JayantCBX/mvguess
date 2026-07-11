@@ -2,10 +2,10 @@ import type { RoomState } from "../../types/game";
 import type { HintSettings } from "../../types/hints";
 import { apiRequest } from "./client";
 
-export async function beginOnlineRoundSetup(args: { room: RoomState; playerId: string }) {
+export async function beginOnlineRoundSetup(args: { room: RoomState; playerId: string; movieGiverPlayerId?: string }) {
   return apiRequest<RoomState>(`/api/rooms/${args.room.code}/setup`, {
     method: "POST",
-    body: JSON.stringify({ playerId: args.playerId })
+    body: JSON.stringify({ playerId: args.playerId, movieGiverPlayerId: args.movieGiverPlayerId })
   });
 }
 

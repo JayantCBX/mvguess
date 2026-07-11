@@ -5,9 +5,15 @@ const REQUEST_TIMEOUT_MS = 12_000;
 
 function safeMessage(status: number, serverMessage?: string): string {
   const normalized = serverMessage?.toLowerCase() ?? "";
+  if (
+    normalized.includes("netlify blobs") ||
+    normalized.includes("decode token") ||
+    normalized.includes("token expired") ||
+    normalized.includes("internal error")
+  ) return "The multiplayer service needs maintenance. Please try again later.";
   if (status === 404 || normalized.includes("not found")) return "Room not found.";
   if (status === 409 && normalized.includes("full")) return "This room is full.";
-  if (normalized.includes("expired")) return "This room has expired.";
+  if (normalized.includes("room expired") || normalized.includes("room has expired")) return "This room has expired.";
   if (status >= 500) return "The multiplayer service is temporarily unavailable. Please try again.";
   return "The multiplayer request could not be completed. Please check the room and try again.";
 }
